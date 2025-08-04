@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Omninet Security</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 400px; margin: 100px auto; padding: 20px; }
+        .login-container { background: #f9f9f9; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .oauth-button { display: block; width: 100%; padding: 15px; margin: 10px 0; text-decoration: none; border-radius: 5px; color: white; text-align: center; font-weight: bold; }
+        .github { background-color: #333; }
+        .google { background-color: #4285f4; }
+        .oauth-button:hover { opacity: 0.9; }
+        h1 { text-align: center; color: #333; }
+        .error { color: red; text-align: center; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>OAuth2 Login</h1>
+
+        <div th:if="${param.error}" class="error">
+            Authentication failed. Please try again.
+        </div>
+
+        <a href="/oauth2/authorization/github" class="oauth-button github">
+            Login with GitHub
+        </a>
+
+        <a href="/oauth2/authorization/google" class="oauth-button google">
+            Login with Google
+        </a>
+
+        <p style="text-align: center; margin-top: 20px;">
+            <a href="/">← Back to Home</a>
+        </p>
+    </div>
+</body>
+</html>
+
