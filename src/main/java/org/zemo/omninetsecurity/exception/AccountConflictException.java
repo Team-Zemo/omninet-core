@@ -1,5 +1,8 @@
 package org.zemo.omninetsecurity.exception;
 
+import lombok.Getter;
+
+@Getter
 public class AccountConflictException extends RuntimeException {
     private final String email;
     private final String existingProvider;
@@ -13,15 +16,4 @@ public class AccountConflictException extends RuntimeException {
         this.newProvider = newProvider;
     }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public String getExistingProvider() {
-        return existingProvider;
-    }
-
-    public String getNewProvider() {
-        return newProvider;
-    }
 }

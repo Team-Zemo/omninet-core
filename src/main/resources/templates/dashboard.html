@@ -281,14 +281,6 @@
                         <div class="stat-label">Total Users</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" th:text="${stats.githubUsers}">0</div>
-                        <div class="stat-label">GitHub Users</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" th:text="${stats.googleUsers}">0</div>
-                        <div class="stat-label">Google Users</div>
-                    </div>
-                    <div class="stat-card">
                         <div class="stat-number" th:text="${stats.mergedAccounts}">0</div>
                         <div class="stat-label">Merged Accounts</div>
                     </div>
@@ -321,64 +313,6 @@
                             <div class="attribute-key">Avatar URL</div>
                             <div class="attribute-value" th:text="${user.avatarUrl}">Avatar URL</div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Provider Specific Information -->
-                <div class="section" th:if="${user.provider == 'github'}">
-                    <h3>GitHub Information</h3>
-                    <div class="attributes-grid">
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('login')}">
-                            <div class="attribute-key">Username</div>
-                            <div class="attribute-value" th:text="${attributes.login}">username</div>
-                        </div>
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('public_repos')}">
-                            <div class="attribute-key">Public Repositories</div>
-                            <div class="attribute-value" th:text="${attributes.public_repos}">0</div>
-                        </div>
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('followers')}">
-                            <div class="attribute-key">Followers</div>
-                            <div class="attribute-value" th:text="${attributes.followers}">0</div>
-                        </div>
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('following')}">
-                            <div class="attribute-key">Following</div>
-                            <div class="attribute-value" th:text="${attributes.following}">0</div>
-                        </div>
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('location')}">
-                            <div class="attribute-key">Location</div>
-                            <div class="attribute-value" th:text="${attributes.location}">Location</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section" th:if="${user.provider == 'google'}">
-                    <h3>Google Information</h3>
-                    <div class="attributes-grid">
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('given_name')}">
-                            <div class="attribute-key">First Name</div>
-                            <div class="attribute-value" th:text="${attributes.given_name}">First Name</div>
-                        </div>
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('family_name')}">
-                            <div class="attribute-key">Last Name</div>
-                            <div class="attribute-value" th:text="${attributes.family_name}">Last Name</div>
-                        </div>
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('locale')}">
-                            <div class="attribute-key">Locale</div>
-                            <div class="attribute-value" th:text="${attributes.locale}">Locale</div>
-                        </div>
-                        <div class="attribute-item" th:if="${attributes != null and attributes.containsKey('email_verified')}">
-                            <div class="attribute-key">Email Verified</div>
-                            <div class="attribute-value" th:text="${attributes.email_verified}">Status</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Show message if no attributes available -->
-                <div class="section" th:if="${attributes == null or attributes.isEmpty()}">
-                    <h3>Provider Attributes</h3>
-                    <div style="text-align: center; color: #666; padding: 20px;">
-                        <p>No provider-specific attributes available.</p>
-                        <p><small>Attributes are only collected on first login for performance optimization.</small></p>
                     </div>
                 </div>
 

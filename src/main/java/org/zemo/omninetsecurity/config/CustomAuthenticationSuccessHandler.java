@@ -28,27 +28,20 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         OAuth2User principal = (OAuth2User) authentication.getPrincipal();
 
         try {
-            // Try to save or update the user
             userService.saveOrUpdateUser(principal);
-
-            // If successful, redirect to dashboard
             response.sendRedirect("/dashboard");
 
         } catch (AccountConflictException e) {
-            // Account conflict detected - store conflict info in session and redirect to merge page
-            log.info("Account conflict detected for email: {}, redirecting to merge confirmation", e.getEmail());
-
             HttpSession session = request.getSession();
             session.setAttribute("conflictEmail", e.getEmail());
             session.setAttribute("existingProvider", e.getExistingProvider());
             session.setAttribute("newProvider", e.getNewProvider());
             session.setAttribute("pendingPrincipal", principal);
-            session.setAttribute("pendingAuthentication", authentication); // Store full authentication
+            session.setAttribute("pendingAuthentication", authentication);
 
             response.sendRedirect("/merge-confirmation");
 
         } catch (Exception e) {
-            // Other errors - log and redirect to error page
             log.error("Error during authentication success handling: {}", e.getMessage(), e);
             response.sendRedirect("/login?error=true");
         }

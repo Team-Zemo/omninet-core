@@ -13,7 +13,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,19 +25,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User user = super.loadUser(userRequest);
 
-        // Check if this is a GitHub user and email is missing or null
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         if ("github".equals(registrationId)) {
             String currentEmail = user.getAttribute("email");
-            log.info("GitHub user email from /user endpoint: {}", currentEmail);
 
             if (currentEmail == null || currentEmail.trim().isEmpty()) {
-                log.info("GitHub user email is null/empty, fetching from /user/emails endpoint");
-
                 String email = fetchGitHubUserEmail(userRequest.getAccessToken().getTokenValue());
                 if (email != null) {
-                    log.info("Successfully fetched GitHub email: {}", email);
-                    // Create a new user with the email attribute added
                     Map<String, Object> attributes = new HashMap<>(user.getAttributes());
                     attributes.put("email", email);
 
@@ -48,11 +41,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                             userRequest.getClientRegistration().getProviderDetails()
                                     .getUserInfoEndpoint().getUserNameAttributeName()
                     );
-                } else {
-                    log.warn("Failed to fetch GitHub email from /user/emails endpoint");
                 }
-            } else {
-                log.info("GitHub user already has email: {}", currentEmail);
             }
         }
 
@@ -76,9 +65,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             );
 
             if (response.getBody() != null && !response.getBody().isEmpty()) {
-                log.info("Received {} email(s) from GitHub /user/emails endpoint", response.getBody().size());
-
-                // Find the primary email first
                 for (Object emailObj : response.getBody()) {
                     if (emailObj instanceof Map) {
                         Map<String, Object> emailData = (Map<String, Object>) emailObj;
@@ -86,16 +72,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                         Boolean isVerified = (Boolean) emailData.get("verified");
                         String email = (String) emailData.get("email");
 
-                        log.debug("Email: {}, Primary: {}, Verified: {}", email, isPrimary, isVerified);
-
                         if (Boolean.TRUE.equals(isPrimary) && Boolean.TRUE.equals(isVerified)) {
-                            log.info("Found primary verified email: {}", email);
                             return email;
                         }
                     }
                 }
 
-                // If no primary verified email found, use the first verified one
                 for (Object emailObj : response.getBody()) {
                     if (emailObj instanceof Map) {
                         Map<String, Object> emailData = (Map<String, Object>) emailObj;
@@ -103,22 +85,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                         String email = (String) emailData.get("email");
 
                         if (Boolean.TRUE.equals(isVerified)) {
-                            log.info("Found verified email: {}", email);
                             return email;
                         }
                     }
                 }
 
-                // Last resort: use the first email even if not verified
                 Object firstEmailObj = response.getBody().get(0);
                 if (firstEmailObj instanceof Map) {
                     Map<String, Object> emailData = (Map<String, Object>) firstEmailObj;
-                    String email = (String) emailData.get("email");
-                    log.warn("Using first available email (may not be verified): {}", email);
-                    return email;
+                    return (String) emailData.get("email");
                 }
-            } else {
-                log.warn("No emails returned from GitHub /user/emails endpoint");
             }
         } catch (Exception e) {
             log.error("Error fetching GitHub user email: {}", e.getMessage(), e);

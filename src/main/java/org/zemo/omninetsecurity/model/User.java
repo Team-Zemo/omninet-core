@@ -23,12 +23,10 @@ public class User {
     private String name;
     private String avatarUrl;
     private String provider;
-
-    // New fields for account merging
     private String primaryProvider;
-    private String linkedProviders; // Comma-separated list of linked providers
+    private String linkedProviders;
     private boolean accountMerged;
-    private String mergedFromUserId; // Original user ID before merge
+    private String mergedFromUserId;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -44,7 +42,7 @@ public class User {
         this.email = email;
         this.name = name;
         this.provider = provider;
-        this.primaryProvider = provider; // Set as primary by default
+        this.primaryProvider = provider;
         this.linkedProviders = provider;
         this.accountMerged = false;
         this.createdAt = LocalDateTime.now();

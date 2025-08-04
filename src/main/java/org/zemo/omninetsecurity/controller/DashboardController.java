@@ -31,36 +31,27 @@ public class DashboardController {
         }
 
         try {
-            // Get user from database using provider ID - no API calls to providers
             String providerId = getUserId(principal);
             Optional<User> userOpt = userService.getUserById(providerId);
 
             User currentUser;
             if (userOpt.isPresent()) {
                 currentUser = userOpt.get();
-                log.info("Found existing user in database: {}", currentUser.getName());
-
-                // Only update last login time
                 currentUser.setLastLoginAt(LocalDateTime.now());
                 currentUser = userService.saveUser(currentUser);
             } else {
-                // This should rarely happen - only for first-time users
-                log.info("User not found in database, processing authentication");
                 currentUser = userService.saveOrUpdateUser(principal);
             }
 
             Map<String, Object> userStats = userService.getUserStats();
 
-            // Add user information to model - use database data, not provider data
             model.addAttribute("user", currentUser);
-            model.addAttribute("attributes", currentUser.getAttributes()); // Use stored attributes
+            model.addAttribute("attributes", currentUser.getAttributes());
             model.addAttribute("stats", userStats);
 
             return "dashboard";
 
         } catch (AccountConflictException e) {
-            // If there's still a conflict, redirect to merge confirmation
-            log.warn("Account conflict detected in dashboard, redirecting to merge confirmation: {}", e.getMessage());
             return "redirect:/merge-confirmation";
         } catch (Exception e) {
             log.error("Error in dashboard: {}", e.getMessage(), e);
@@ -74,7 +65,6 @@ public class DashboardController {
             return id.toString();
         }
 
-        // For Google, use 'sub' claim
         Object sub = principal.getAttribute("sub");
         if (sub != null) {
             return sub.toString();

@@ -46,24 +46,20 @@ public class HomeController {
     public String mergeConfirmation(Model model, HttpServletRequest request) {
         HttpSession session = request.getSession();
 
-        // Get conflict information from session
         String conflictEmail = (String) session.getAttribute("conflictEmail");
         String existingProvider = (String) session.getAttribute("existingProvider");
         String newProvider = (String) session.getAttribute("newProvider");
         OAuth2User pendingPrincipal = (OAuth2User) session.getAttribute("pendingPrincipal");
 
         if (conflictEmail == null || existingProvider == null || newProvider == null || pendingPrincipal == null) {
-            // No conflict data in session, redirect to login
             return "redirect:/login";
         }
 
-        // Get detailed conflict information
         Map<String, Object> conflictInfo = userService.getAccountConflictInfo(pendingPrincipal);
 
         if (conflictInfo != null) {
             model.addAllAttributes(conflictInfo);
         } else {
-            // Fallback - create basic conflict info from session data
             model.addAttribute("email", conflictEmail);
             model.addAttribute("conflictType", "DIFFERENT_PROVIDER");
 
@@ -84,7 +80,6 @@ public class HomeController {
     public String confirmMerge(HttpServletRequest request) {
         HttpSession session = request.getSession();
 
-        // Get the pending principal and authentication from session
         OAuth2User pendingPrincipal = (OAuth2User) session.getAttribute("pendingPrincipal");
         Authentication pendingAuthentication = (Authentication) session.getAttribute("pendingAuthentication");
 
@@ -93,20 +88,16 @@ public class HomeController {
         }
 
         try {
-            // Merge accounts with confirmation
             User mergedUser = userService.saveOrUpdateUser(pendingPrincipal, true);
 
-            // Set the authentication in the security context so user is logged in
             SecurityContextHolder.getContext().setAuthentication(pendingAuthentication);
 
-            // Clear session data
             session.removeAttribute("conflictEmail");
             session.removeAttribute("existingProvider");
             session.removeAttribute("newProvider");
             session.removeAttribute("pendingPrincipal");
             session.removeAttribute("pendingAuthentication");
 
-            // Redirect to dashboard
             return "redirect:/dashboard";
 
         } catch (Exception e) {
