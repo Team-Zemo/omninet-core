@@ -53,9 +53,9 @@ public class UserService {
 
                 // If account is merged and contains this provider, update last login only
                 if (existing.isAccountMerged() && existing.getLinkedProviders() != null &&
-                    existing.getLinkedProviders().contains(provider)) {
+                        existing.getLinkedProviders().contains(provider)) {
                     log.info("Found merged account for email: {}, provider: {}, updating last login time only",
-                             email, provider);
+                            email, provider);
                     existing.setLastLoginAt(LocalDateTime.now());
                     return userRepository.save(existing);
                 }
@@ -63,7 +63,7 @@ public class UserService {
                 // If conflict exists and merge not confirmed, handle conflict
                 if (!confirmMerge) {
                     log.warn("Account conflict detected for email: {} between providers: {} and {}",
-                             email, existing.getProvider(), provider);
+                            email, existing.getProvider(), provider);
                     throw new AccountConflictException(email, existing.getProvider(), provider);
                 }
 
@@ -118,8 +118,8 @@ public class UserService {
             User secondaryUser = conflict.getNewUser();
 
             log.info("Auto-merging accounts: {} ({}) as primary, {} ({}) as secondary",
-                     primaryUser.getName(), primaryUser.getProvider(),
-                     secondaryUser.getName(), secondaryUser.getProvider());
+                    primaryUser.getName(), primaryUser.getProvider(),
+                    secondaryUser.getName(), secondaryUser.getProvider());
 
             return accountMergeService.mergeAccounts(primaryUser, secondaryUser, principal);
         } else {
@@ -174,7 +174,7 @@ public class UserService {
         String provider = determineProvider(principal);
 
         log.info("Extracting user from principal - ID: {}, Email: {}, Name: {}, Provider: {}",
-                 id, email, name, provider);
+                id, email, name, provider);
 
         if (email == null || email.trim().isEmpty()) {
             log.warn("User email is null or empty for user ID: {} from provider: {}", id, provider);
@@ -231,7 +231,7 @@ public class UserService {
 
         // Google specific attributes
         if (principal.getAttribute("given_name") != null ||
-            principal.getAttribute("family_name") != null) {
+                principal.getAttribute("family_name") != null) {
             return "google";
         }
 
@@ -246,8 +246,8 @@ public class UserService {
 
     private User mergeAccounts(User primaryUser, User secondaryUser, OAuth2User principal) {
         log.info("Merging accounts: Primary {} ({}), Secondary {} ({})",
-                 primaryUser.getName(), primaryUser.getProvider(),
-                 secondaryUser.getName(), secondaryUser.getProvider());
+                primaryUser.getName(), primaryUser.getProvider(),
+                secondaryUser.getName(), secondaryUser.getProvider());
 
         // Update primary user with merged information
         primaryUser.setAccountMerged(true);

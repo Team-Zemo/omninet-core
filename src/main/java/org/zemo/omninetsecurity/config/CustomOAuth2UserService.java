@@ -43,10 +43,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     attributes.put("email", email);
 
                     return new DefaultOAuth2User(
-                        user.getAuthorities(),
-                        attributes,
-                        userRequest.getClientRegistration().getProviderDetails()
-                            .getUserInfoEndpoint().getUserNameAttributeName()
+                            user.getAuthorities(),
+                            attributes,
+                            userRequest.getClientRegistration().getProviderDetails()
+                                    .getUserInfoEndpoint().getUserNameAttributeName()
                     );
                 } else {
                     log.warn("Failed to fetch GitHub email from /user/emails endpoint");
@@ -69,10 +69,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
             HttpEntity<String> entity = new HttpEntity<>(headers);
             ResponseEntity<List> response = restTemplate.exchange(
-                "https://api.github.com/user/emails",
-                HttpMethod.GET,
-                entity,
-                List.class
+                    "https://api.github.com/user/emails",
+                    HttpMethod.GET,
+                    entity,
+                    List.class
             );
 
             if (response.getBody() != null && !response.getBody().isEmpty()) {

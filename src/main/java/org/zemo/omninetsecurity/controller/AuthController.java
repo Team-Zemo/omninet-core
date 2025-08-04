@@ -153,7 +153,7 @@ public class AuthController {
 
     @PostMapping("/merge-accounts")
     public ResponseEntity<Map<String, Object>> mergeAccounts(@AuthenticationPrincipal OAuth2User principal,
-                                                            @RequestParam(defaultValue = "true") boolean confirm) {
+                                                             @RequestParam(defaultValue = "true") boolean confirm) {
         if (principal == null) {
             return ResponseEntity.status(401).build();
         }

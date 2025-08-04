@@ -31,9 +31,17 @@ public class AccountMergeService {
             this.conflictType = conflictType;
         }
 
-        public User getExistingUser() { return existingUser; }
-        public User getNewUser() { return newUser; }
-        public String getConflictType() { return conflictType; }
+        public User getExistingUser() {
+            return existingUser;
+        }
+
+        public User getNewUser() {
+            return newUser;
+        }
+
+        public String getConflictType() {
+            return conflictType;
+        }
     }
 
     /**
@@ -51,15 +59,15 @@ public class AccountMergeService {
 
             // If same provider and same ID, no conflict
             if (existing.getId().equals(newUser.getId()) &&
-                existing.getProvider().equals(newUser.getProvider())) {
+                    existing.getProvider().equals(newUser.getProvider())) {
                 return Optional.empty();
             }
 
             // If the existing account is already merged and contains the new provider, no conflict
             if (existing.isAccountMerged() && existing.getLinkedProviders() != null &&
-                existing.getLinkedProviders().contains(newUser.getProvider())) {
+                    existing.getLinkedProviders().contains(newUser.getProvider())) {
                 log.info("Account already merged for email: {}, provider {} is already linked",
-                         newUser.getEmail(), newUser.getProvider());
+                        newUser.getEmail(), newUser.getProvider());
                 return Optional.empty();
             }
 
@@ -70,7 +78,7 @@ public class AccountMergeService {
 
             // If same provider but different ID, also a conflict
             if (existing.getProvider().equals(newUser.getProvider()) &&
-                !existing.getId().equals(newUser.getId())) {
+                    !existing.getId().equals(newUser.getId())) {
                 return Optional.of(new AccountConflict(existing, newUser, "SAME_PROVIDER_DIFFERENT_ID"));
             }
         }
@@ -83,8 +91,8 @@ public class AccountMergeService {
      */
     public User mergeAccounts(User primaryUser, User secondaryUser, OAuth2User currentPrincipal) {
         log.info("Merging accounts: Primary {} ({}), Secondary {} ({})",
-                 primaryUser.getName(), primaryUser.getProvider(),
-                 secondaryUser.getName(), secondaryUser.getProvider());
+                primaryUser.getName(), primaryUser.getProvider(),
+                secondaryUser.getName(), secondaryUser.getProvider());
 
         // Update primary user with merged information
         primaryUser.setAccountMerged(true);
@@ -121,13 +129,13 @@ public class AccountMergeService {
 
         // Update avatar if secondary user has one and primary doesn't
         if ((primaryUser.getAvatarUrl() == null || primaryUser.getAvatarUrl().trim().isEmpty())
-            && secondaryUser.getAvatarUrl() != null) {
+                && secondaryUser.getAvatarUrl() != null) {
             primaryUser.setAvatarUrl(secondaryUser.getAvatarUrl());
         }
 
         // Update name if primary user's name is empty but secondary has one
         if ((primaryUser.getName() == null || primaryUser.getName().trim().isEmpty())
-            && secondaryUser.getName() != null && !secondaryUser.getName().trim().isEmpty()) {
+                && secondaryUser.getName() != null && !secondaryUser.getName().trim().isEmpty()) {
             primaryUser.setName(secondaryUser.getName());
         }
 
@@ -137,7 +145,7 @@ public class AccountMergeService {
         // DON'T save the secondary user as a new record to avoid unique constraint violation
         // Instead, just log the merge operation
         log.info("Successfully merged accounts. Primary user: {}, Added provider: {}",
-                 savedUser.getId(), secondaryUser.getProvider());
+                savedUser.getId(), secondaryUser.getProvider());
 
         return savedUser;
     }
@@ -181,7 +189,7 @@ public class AccountMergeService {
 
         // Google specific attributes
         if (principal.getAttribute("given_name") != null ||
-            principal.getAttribute("family_name") != null) {
+                principal.getAttribute("family_name") != null) {
             return "google";
         }
 
