@@ -32,33 +32,6 @@ public class AuthController {
         String providerId = getUserId(principal);
         Optional<User> userOpt = userService.getUserById(providerId);
 
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            user.setLastLoginAt(LocalDateTime.now());
-            user = userService.saveUser(user);
-            return ResponseEntity.ok(user);
-        } else {
-            User user = userService.saveOrUpdateUser(principal);
-            return ResponseEntity.ok(user);
-        }
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Logged out successfully");
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/profile")
-    public ResponseEntity<Map<String, Object>> getUserProfile(@AuthenticationPrincipal OAuth2User principal) {
-        if (principal == null) {
-            return ResponseEntity.status(401).build();
-        }
-
-        String providerId = getUserId(principal);
-        Optional<User> userOpt = userService.getUserById(providerId);
-
         User user;
         if (userOpt.isPresent()) {
             user = userOpt.get();
@@ -67,13 +40,14 @@ public class AuthController {
         } else {
             user = userService.saveOrUpdateUser(principal);
         }
+        return ResponseEntity.ok(user);
+    }
 
-        Map<String, Object> profile = new HashMap<>();
-        profile.put("user", user);
-        profile.put("attributes", user.getAttributes());
-        profile.put("authorities", principal.getAuthorities());
-
-        return ResponseEntity.ok(profile);
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Logged out successfully");
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/merge-accounts")

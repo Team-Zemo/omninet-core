@@ -65,16 +65,6 @@ public class UserService {
         return userRepository.save(newUser);
     }
 
-    public Map<String, Object> getAccountConflictInfo(OAuth2User principal) {
-        User user = extractUserFromPrincipal(principal);
-        Optional<AccountMergeService.AccountConflict> conflict = accountMergeService.checkForConflict(user);
-
-        if (conflict.isPresent()) {
-            return accountMergeService.createMergeConfirmationData(conflict.get());
-        }
-
-        return null;
-    }
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
