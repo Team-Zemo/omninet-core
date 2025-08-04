@@ -30,9 +30,8 @@ public class HomeController {
     @GetMapping("/")
     public String home(Model model, @AuthenticationPrincipal OAuth2User principal) {
         if (principal != null) {
-            model.addAttribute("name", principal.getAttribute("name"));
-            model.addAttribute("login", principal.getAttribute("login"));
-            model.addAttribute("email", principal.getAttribute("email"));
+            // If user is authenticated, redirect to React dashboard
+            return "redirect:http://localhost:5173/dashboard";
         }
         return "index";
     }
@@ -52,7 +51,7 @@ public class HomeController {
         OAuth2User pendingPrincipal = (OAuth2User) session.getAttribute("pendingPrincipal");
 
         if (conflictEmail == null || existingProvider == null || newProvider == null || pendingPrincipal == null) {
-            return "redirect:/login";
+            return "redirect:http://localhost:5173/login";
         }
 
         Map<String, Object> conflictInfo = userService.getAccountConflictInfo(pendingPrincipal);
@@ -84,7 +83,7 @@ public class HomeController {
         Authentication pendingAuthentication = (Authentication) session.getAttribute("pendingAuthentication");
 
         if (pendingPrincipal == null || pendingAuthentication == null) {
-            return "redirect:/login?error=true";
+            return "redirect:http://localhost:5173/login?error=true";
         }
 
         try {
@@ -98,11 +97,11 @@ public class HomeController {
             session.removeAttribute("pendingPrincipal");
             session.removeAttribute("pendingAuthentication");
 
-            return "redirect:/dashboard";
+            return "redirect:http://localhost:5173/dashboard";
 
         } catch (Exception e) {
             log.error("Error during merge confirmation: {}", e.getMessage(), e);
-            return "redirect:/merge-confirmation?error=true";
+            return "redirect:http://localhost:5173/merge-confirmation?error=true";
         }
     }
 }

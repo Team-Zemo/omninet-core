@@ -29,7 +29,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
         try {
             userService.saveOrUpdateUser(principal);
-            response.sendRedirect("/dashboard");
+            response.sendRedirect("http://localhost:5173/dashboard");
 
         } catch (AccountConflictException e) {
             HttpSession session = request.getSession();
@@ -39,11 +39,11 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             session.setAttribute("pendingPrincipal", principal);
             session.setAttribute("pendingAuthentication", authentication);
 
-            response.sendRedirect("/merge-confirmation");
+            response.sendRedirect("http://localhost:5173/merge-confirmation");
 
         } catch (Exception e) {
             log.error("Error during authentication success handling: {}", e.getMessage(), e);
-            response.sendRedirect("/login?error=true");
+            response.sendRedirect("http://localhost:5173/login?error=true");
         }
     }
 }

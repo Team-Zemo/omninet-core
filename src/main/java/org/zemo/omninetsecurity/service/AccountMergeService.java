@@ -1,5 +1,6 @@
 package org.zemo.omninetsecurity.service;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -19,6 +20,7 @@ public class AccountMergeService {
 
     private final UserRepository userRepository;
 
+    @Getter
     public static class AccountConflict {
         private final User existingUser;
         private final User newUser;
@@ -30,17 +32,6 @@ public class AccountMergeService {
             this.conflictType = conflictType;
         }
 
-        public User getExistingUser() {
-            return existingUser;
-        }
-
-        public User getNewUser() {
-            return newUser;
-        }
-
-        public String getConflictType() {
-            return conflictType;
-        }
     }
 
     public Optional<AccountConflict> checkForConflict(User newUser) {
@@ -67,10 +58,7 @@ public class AccountMergeService {
                 return Optional.of(new AccountConflict(existing, newUser, "DIFFERENT_PROVIDER"));
             }
 
-            if (existing.getProvider().equals(newUser.getProvider()) &&
-                    !existing.getId().equals(newUser.getId())) {
-                return Optional.of(new AccountConflict(existing, newUser, "SAME_PROVIDER_DIFFERENT_ID"));
-            }
+            return Optional.of(new AccountConflict(existing, newUser, "SAME_PROVIDER_DIFFERENT_ID"));
         }
 
         return Optional.empty();
