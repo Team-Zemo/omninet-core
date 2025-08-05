@@ -25,6 +25,11 @@ public class User {
     private String linkedProviders;
     private boolean accountMerged;
 
+    // New fields for email/password authentication
+    private String password; // Will be hashed for email registrations
+    private boolean emailVerified = false;
+    private String registrationSource; // "oauth" or "email"
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -38,7 +43,32 @@ public class User {
         this.provider = provider;
         this.linkedProviders = provider;
         this.accountMerged = false;
+        this.registrationSource = "oauth";
+        this.emailVerified = true; // OAuth emails are considered verified
         this.createdAt = LocalDateTime.now();
         this.lastLoginAt = LocalDateTime.now();
+    }
+
+    // Constructor for email registration
+    public User(String email, String name, String hashedPassword) {
+        this.id = java.util.UUID.randomUUID().toString();
+        this.email = email;
+        this.name = name;
+        this.password = hashedPassword;
+        this.provider = "email";
+        this.linkedProviders = "email";
+        this.accountMerged = false;
+        this.registrationSource = "email";
+        this.emailVerified = true; // Will be set after OTP verification
+        this.createdAt = LocalDateTime.now();
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
+    public boolean hasPassword() {
+        return password != null && !password.trim().isEmpty();
+    }
+
+    public boolean supportsOAuthProvider(String providerName) {
+        return linkedProviders != null && linkedProviders.contains(providerName);
     }
 }

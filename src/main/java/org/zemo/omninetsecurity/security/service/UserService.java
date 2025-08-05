@@ -72,24 +72,6 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-    public Map<String, Object> getUserStats() {
-        List<User> allUsers = userRepository.findAll();
-        Map<String, Object> stats = new HashMap<>();
-
-        long totalUsers = allUsers.size();
-        long githubUsers = allUsers.stream().filter(u -> "github".equals(u.getProvider())).count();
-        long googleUsers = allUsers.stream().filter(u -> "google".equals(u.getProvider())).count();
-        long mergedAccounts = allUsers.stream().filter(User::isAccountMerged).count();
-
-        stats.put("totalUsers", totalUsers);
-        stats.put("githubUsers", githubUsers);
-        stats.put("googleUsers", googleUsers);
-        stats.put("mergedAccounts", mergedAccounts);
-        stats.put("otherProviders", totalUsers - githubUsers - googleUsers);
-
-        return stats;
-    }
-
     public User extractUserFromPrincipal(OAuth2User principal) {
         String id = getUserId(principal);
         String email = principal.getAttribute("email");

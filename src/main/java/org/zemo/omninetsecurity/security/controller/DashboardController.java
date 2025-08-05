@@ -36,17 +36,6 @@ public class DashboardController {
         return ResponseEntity.ok(users);
     }
 
-    @GetMapping("/api/dashboard/stats")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> getDashboardStats(@AuthenticationPrincipal OAuth2User principal) {
-        if (principal == null) {
-            return ResponseEntity.status(401).build();
-        }
-
-        Map<String, Object> stats = userService.getUserStats();
-        return ResponseEntity.ok(stats);
-    }
-
     @PostMapping("/confirm-merge")
     public String confirmMerge(HttpServletRequest request) {
         HttpSession session = request.getSession();

@@ -6,6 +6,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -28,12 +30,19 @@ public class SecurityConfig {
     }
 
     @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/", "/login", "/error", "/webjars/**", "/css/**", "/js/**", "/merge-confirmation").permitAll()
+                .requestMatchers("/api/auth/register/**", "/api/auth/verify-otp", "/api/auth/complete-registration").permitAll()
+                .requestMatchers("/api/auth/login/email", "/api/auth/check-methods").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/user").authenticated()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
