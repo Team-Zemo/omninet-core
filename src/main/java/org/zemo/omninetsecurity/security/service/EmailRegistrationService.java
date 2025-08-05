@@ -159,11 +159,8 @@ public class EmailRegistrationService {
                 throw new RuntimeException("An account with this email already exists");
             }
 
-            // OAuth user exists - handle merge (always require password now)
-            if (!confirmMerge) {
-                throw new AccountConflictException(email, existingUser.getProvider(), "email");
-            }
-
+            // OAuth user exists - automatically merge (like OAuth to OAuth)
+            log.info("Automatically merging email authentication with existing OAuth account: {}", email);
             return mergeWithOAuthAccount(existingUser, name, password, pendingUser);
         } else {
             // Create new email-based user
