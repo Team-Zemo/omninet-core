@@ -1,12 +1,12 @@
-package org.zemo.omninetsecurity.service;
+package org.zemo.omninetsecurity.security.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
-import org.zemo.omninetsecurity.exception.AccountConflictException;
-import org.zemo.omninetsecurity.model.User;
-import org.zemo.omninetsecurity.repository.UserRepository;
+import org.zemo.omninetsecurity.security.exception.AccountConflictException;
+import org.zemo.omninetsecurity.security.model.User;
+import org.zemo.omninetsecurity.security.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -14,13 +14,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
-    private final AccountMergeService accountMergeService;
 
     public User saveOrUpdateUser(OAuth2User principal) {
         return saveOrUpdateUser(principal, false);
@@ -52,9 +52,7 @@ public class UserService {
 
                 if (!confirmMerge) {
                     throw new AccountConflictException(email, existing.getProvider(), provider);
-                }
-
-                if (confirmMerge) {
+                } else {
                     User newUserData = extractUserFromPrincipal(principal);
                     return mergeAccounts(existing, newUserData, principal);
                 }
@@ -101,7 +99,6 @@ public class UserService {
 
         User user = new User(id, email, name, provider);
         user.setAvatarUrl(avatarUrl);
-        user.setAttributes(principal.getAttributes());
         user.setLastLoginAt(LocalDateTime.now());
 
         return user;
@@ -127,12 +124,7 @@ public class UserService {
             return avatarUrl;
         }
 
-        String picture = principal.getAttribute("picture");
-        if (picture != null) {
-            return picture;
-        }
-
-        return null;
+        return principal.getAttribute("picture");
     }
 
     private String determineProvider(OAuth2User principal) {

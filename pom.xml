@@ -9,10 +9,10 @@
         <relativePath/>
     </parent>
     <groupId>org.zemo</groupId>
-    <artifactId>omninet-security</artifactId>
+    <artifactId>omninet-core</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>omninet-security</name>
-    <description>omninet-security</description>
+    <name>omninet-core</name>
+    <description>omninet-core</description>
 
     <properties>
         <java.version>21</java.version>

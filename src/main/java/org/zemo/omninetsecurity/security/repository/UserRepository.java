@@ -1,8 +1,8 @@
-package org.zemo.omninetsecurity.repository;
+package org.zemo.omninetsecurity.security.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import org.zemo.omninetsecurity.model.User;
+import org.zemo.omninetsecurity.security.model.User;
 
 import java.util.Optional;
 

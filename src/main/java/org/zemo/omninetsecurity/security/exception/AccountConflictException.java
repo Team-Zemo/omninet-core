@@ -1,4 +1,4 @@
-package org.zemo.omninetsecurity.exception;
+package org.zemo.omninetsecurity.security.exception;
 
 import lombok.Getter;
 
