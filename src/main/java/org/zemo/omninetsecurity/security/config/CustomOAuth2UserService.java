@@ -1,4 +1,4 @@
-package org.zemo.omninetsecurity.config;
+package org.zemo.omninetsecurity.security.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -90,7 +90,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     }
                 }
 
-                Object firstEmailObj = response.getBody().get(0);
+                Object firstEmailObj = response.getBody().getFirst();
                 if (firstEmailObj instanceof Map) {
                     Map<String, Object> emailData = (Map<String, Object>) firstEmailObj;
                     return (String) emailData.get("email");

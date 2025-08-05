@@ -1,4 +1,4 @@
-package org.zemo.omninetsecurity.model;
+package org.zemo.omninetsecurity.security.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -23,10 +22,8 @@ public class User {
     private String name;
     private String avatarUrl;
     private String provider;
-    private String primaryProvider;
     private String linkedProviders;
     private boolean accountMerged;
-    private String mergedFromUserId;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -34,15 +31,11 @@ public class User {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
-    @Transient
-    private Map<String, Object> attributes;
-
     public User(String id, String email, String name, String provider) {
         this.id = id;
         this.email = email;
         this.name = name;
         this.provider = provider;
-        this.primaryProvider = provider;
         this.linkedProviders = provider;
         this.accountMerged = false;
         this.createdAt = LocalDateTime.now();

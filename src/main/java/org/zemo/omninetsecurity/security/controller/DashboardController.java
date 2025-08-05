@@ -1,4 +1,4 @@
-package org.zemo.omninetsecurity.controller;
+package org.zemo.omninetsecurity.security.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -11,8 +11,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.zemo.omninetsecurity.model.User;
-import org.zemo.omninetsecurity.service.UserService;
+import org.zemo.omninetsecurity.security.model.User;
+import org.zemo.omninetsecurity.security.service.UserService;
 
 import java.util.List;
 import java.util.Map;
