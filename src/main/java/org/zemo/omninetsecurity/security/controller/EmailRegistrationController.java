@@ -57,13 +57,12 @@ public class EmailRegistrationController {
     public ResponseEntity<Map<String, Object>> completeRegistration(
             @Valid @RequestBody CompleteRegistrationRequest request) {
         try {
-            // Remove confirmMerge parameter - merging is now automatic
             Map<String, Object> response = emailRegistrationService.completeRegistration(
                     request.getEmail(),
                     request.getName(),
                     request.getPassword(),
                     request.getVerificationToken(),
-                    true // Always confirm merge automatically
+                    true
             );
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -78,7 +77,6 @@ public class EmailRegistrationController {
     @PostMapping("/register/resend-otp")
     public ResponseEntity<Map<String, Object>> resendOtp(@Valid @RequestBody EmailRegistrationRequest request) {
         try {
-            // Reuse the initiate registration flow to resend OTP
             Map<String, Object> response = emailRegistrationService.initiateEmailRegistration(request.getEmail());
             response.put("message", "Verification code resent successfully");
             return ResponseEntity.ok(response);
@@ -95,7 +93,6 @@ public class EmailRegistrationController {
     public ResponseEntity<Map<String, Object>> checkEmailAvailability(@RequestParam String email) {
         try {
             Map<String, Object> response = new HashMap<>();
-            // This is a simple check - the actual conflict resolution happens during completion
             response.put("available", true);
             response.put("message", "Email can be used for registration");
             return ResponseEntity.ok(response);

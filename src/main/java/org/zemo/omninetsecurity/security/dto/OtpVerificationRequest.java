@@ -21,7 +21,7 @@ public class OtpVerificationRequest {
     @JsonProperty(value = "otp", access = JsonProperty.Access.WRITE_ONLY)
     private String otp;
 
-    // Additional setter to handle both "otp" and "otpCode" from frontend
+
     @JsonProperty("otpCode")
     public void setOtpCode(String otpCode) {
         this.otp = otpCode;

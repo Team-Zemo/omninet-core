@@ -48,7 +48,6 @@ public class DashboardController {
         }
 
         try {
-            User mergedUser = userService.saveOrUpdateUser(pendingPrincipal, true);
 
             SecurityContextHolder.getContext().setAuthentication(pendingAuthentication);
 

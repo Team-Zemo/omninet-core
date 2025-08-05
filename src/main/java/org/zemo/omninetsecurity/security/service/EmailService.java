@@ -41,7 +41,6 @@ public class EmailService {
             log.info("Welcome email sent successfully to: {}", to);
         } catch (Exception e) {
             log.error("Failed to send welcome email to: {}", to, e);
-            // Don't throw exception for welcome email failure
         }
     }
 
@@ -57,7 +56,6 @@ public class EmailService {
             log.info("Account merge notification sent successfully to: {}", to);
         } catch (Exception e) {
             log.error("Failed to send account merge notification to: {}", to, e);
-            // Don't throw exception for notification email failure
         }
     }
 

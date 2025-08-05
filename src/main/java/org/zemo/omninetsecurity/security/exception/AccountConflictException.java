@@ -15,5 +15,4 @@ public class AccountConflictException extends RuntimeException {
         this.existingProvider = existingProvider;
         this.newProvider = newProvider;
     }
-
 }

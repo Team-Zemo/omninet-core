@@ -36,17 +36,14 @@ public class EmailRegistrationService {
     public Map<String, Object> initiateEmailRegistration(String email) {
         log.info("Initiating email registration for: {}", email);
 
-        // Clean up expired records
         cleanupExpiredRecords(email);
 
-        // Check if user already exists
         Optional<User> existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
             User user = existingUser.get();
             if ("email".equals(user.getRegistrationSource())) {
                 throw new RuntimeException("An account with this email already exists. Please try logging in.");
             } else {
-                // OAuth user exists - will handle merge later
                 log.info("OAuth user exists for email: {}, will handle merge during completion", email);
             }
         }
@@ -54,11 +51,9 @@ public class EmailRegistrationService {
         // Generate OTP
         String otp = generateOtp();
 
-        // Save verification record
         EmailVerification verification = new EmailVerification(email, otp, 15); // 15 minutes validity
         emailVerificationRepository.save(verification);
 
-        // Send OTP email
         emailService.sendOtpEmail(email, otp);
 
         Map<String, Object> response = new HashMap<>();
@@ -82,7 +77,6 @@ public class EmailRegistrationService {
 
         EmailVerification verification = verificationOpt.get();
 
-        // Increment attempt count
         verification.setAttemptCount(verification.getAttemptCount() + 1);
 
         if (!verification.isValid()) {
@@ -90,15 +84,12 @@ public class EmailRegistrationService {
             throw new RuntimeException("Verification code has expired or maximum attempts exceeded");
         }
 
-        // Mark as verified
         verification.setVerified(true);
         verification.setUsed(true);
         emailVerificationRepository.save(verification);
 
-        // Generate verification token for the next step
         String verificationToken = UUID.randomUUID().toString();
 
-        // Check for existing OAuth user
         Optional<User> existingUser = userRepository.findByEmail(email);
         boolean hasConflict = existingUser.isPresent() && !"email".equals(existingUser.get().getRegistrationSource());
 
@@ -117,13 +108,12 @@ public class EmailRegistrationService {
                 "Completing registration will merge your accounts.", user.getProvider()));
         }
 
-        // Store verification token temporarily - properly initialize PendingUser
         PendingUser pendingUser = new PendingUser();
         pendingUser.setEmail(email);
         pendingUser.setVerificationToken(verificationToken);
         pendingUser.setEmailVerified(true);
         pendingUser.setCreatedAt(LocalDateTime.now());
-        pendingUser.setExpiresAt(LocalDateTime.now().plusHours(24)); // 24 hours to complete registration
+        pendingUser.setExpiresAt(LocalDateTime.now().plusHours(24));
         pendingUserRepository.save(pendingUser);
 
         return response;
@@ -134,7 +124,6 @@ public class EmailRegistrationService {
                                                    String verificationToken, boolean confirmMerge) {
         log.info("Completing registration for email: {}", email);
 
-        // Validate verification token
         Optional<PendingUser> pendingUserOpt = pendingUserRepository.findByVerificationToken(verificationToken);
         if (pendingUserOpt.isEmpty() || !pendingUserOpt.get().getEmail().equals(email)) {
             throw new RuntimeException("Invalid verification token");
@@ -145,12 +134,10 @@ public class EmailRegistrationService {
             throw new RuntimeException("Verification token has expired");
         }
 
-        // Password is now required for ALL registrations
         if (password == null || password.trim().isEmpty()) {
             throw new RuntimeException("Password is required for all registrations");
         }
 
-        // Check for existing OAuth user
         Optional<User> existingUserOpt = userRepository.findByEmail(email);
 
         if (existingUserOpt.isPresent()) {
@@ -159,11 +146,9 @@ public class EmailRegistrationService {
                 throw new RuntimeException("An account with this email already exists");
             }
 
-            // OAuth user exists - automatically merge (like OAuth to OAuth)
             log.info("Automatically merging email authentication with existing OAuth account: {}", email);
             return mergeWithOAuthAccount(existingUser, name, password, pendingUser);
         } else {
-            // Create new email-based user
             return createNewEmailUser(email, name, password, pendingUser);
         }
     }
@@ -173,10 +158,8 @@ public class EmailRegistrationService {
         User user = new User(email, name, hashedPassword);
         user = userRepository.save(user);
 
-        // Clean up pending user record
         pendingUserRepository.delete(pendingUser);
 
-        // Send welcome email
         emailService.sendWelcomeEmail(email, name);
 
         Map<String, Object> response = new HashMap<>();
@@ -190,15 +173,12 @@ public class EmailRegistrationService {
     }
 
     private Map<String, Object> mergeWithOAuthAccount(User existingUser, String name, String password, PendingUser pendingUser) {
-        // Add password to existing OAuth user
         existingUser.setPassword(passwordEncoder.encode(password));
 
-        // Update name if provided and current name is different
         if (name != null && !name.trim().isEmpty() && !name.equals(existingUser.getName())) {
             existingUser.setName(name);
         }
 
-        // Update linked providers
         String linkedProviders = existingUser.getLinkedProviders();
         if (linkedProviders == null || !linkedProviders.contains("email")) {
             linkedProviders = linkedProviders != null ? linkedProviders + ",email" : "email";
@@ -210,10 +190,8 @@ public class EmailRegistrationService {
 
         existingUser = userRepository.save(existingUser);
 
-        // Clean up pending user record
         pendingUserRepository.delete(pendingUser);
 
-        // Send merge notification
         emailService.sendAccountMergeNotification(existingUser.getEmail(), existingUser.getName(), "email");
 
         Map<String, Object> response = new HashMap<>();
@@ -234,7 +212,6 @@ public class EmailRegistrationService {
     private void cleanupExpiredRecords(String email) {
         LocalDateTime now = LocalDateTime.now();
         emailVerificationRepository.deleteByEmailAndExpiresAtBefore(email, now);
-        // Also cleanup old pending users for this email
         pendingUserRepository.deleteByEmail(email);
     }
 

@@ -23,13 +23,13 @@ public class PendingUser {
     private String name;
     private String password; // Will be hashed
     private String verificationToken;
-    
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
-    
+
     @Column(nullable = false)
     private LocalDateTime expiresAt;
-    
+
     private boolean emailVerified = false;
 
     public PendingUser(String email, String name, String password, String verificationToken) {
@@ -38,7 +38,7 @@ public class PendingUser {
         this.password = password;
         this.verificationToken = verificationToken;
         this.createdAt = LocalDateTime.now();
-        this.expiresAt = LocalDateTime.now().plusHours(24); // 24 hours to complete registration
+        this.expiresAt = LocalDateTime.now().plusHours(24);
         this.emailVerified = false;
     }
 

@@ -27,7 +27,6 @@ public class AuthenticationService {
         try {
             log.info("Attempting email/password authentication for: {}", email);
 
-            // Find user by email
             Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
                 return ApiResponse.error("Invalid email or password");
@@ -35,22 +34,18 @@ public class AuthenticationService {
 
             User user = userOpt.get();
 
-            // Check if user has a password set
             if (!user.hasPassword()) {
                 return ApiResponse.error("Password authentication not available for this account. Please use " +
                     user.getProvider() + " to sign in, or set up password authentication.");
             }
 
-            // Verify password
             if (!passwordEncoder.matches(password, user.getPassword())) {
                 return ApiResponse.error("Invalid email or password");
             }
 
-            // Update last login
             user.setLastLoginAt(LocalDateTime.now());
             user = userRepository.save(user);
 
-            // Create response data
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("user", user);
             responseData.put("authMethod", "email");
@@ -103,15 +98,12 @@ public class AuthenticationService {
 
             User user = userOpt.get();
 
-            // Check if user already has a password
             if (user.hasPassword()) {
                 return ApiResponse.error("Account already has password authentication enabled");
             }
 
-            // Add password to the account
             user.setPassword(passwordEncoder.encode(password));
 
-            // Update linked providers to include email
             String linkedProviders = user.getLinkedProviders();
             if (linkedProviders == null || !linkedProviders.contains("email")) {
                 linkedProviders = linkedProviders != null ? linkedProviders + ",email" : "email";

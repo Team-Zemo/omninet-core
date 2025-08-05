@@ -25,7 +25,6 @@ public class User {
     private String linkedProviders;
     private boolean accountMerged;
 
-    // New fields for email/password authentication
     private String password; // Will be hashed for email registrations
     private boolean emailVerified = false;
     private String registrationSource; // "oauth" or "email"
