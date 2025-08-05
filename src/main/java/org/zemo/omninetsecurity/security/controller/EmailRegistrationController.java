@@ -55,29 +55,17 @@ public class EmailRegistrationController {
 
     @PostMapping("/register/complete")
     public ResponseEntity<Map<String, Object>> completeRegistration(
-            @Valid @RequestBody CompleteRegistrationRequest request,
-            @RequestParam(defaultValue = "false") boolean confirmMerge) {
+            @Valid @RequestBody CompleteRegistrationRequest request) {
         try {
+            // Remove confirmMerge parameter - merging is now automatic
             Map<String, Object> response = emailRegistrationService.completeRegistration(
                     request.getEmail(),
                     request.getName(),
                     request.getPassword(),
                     request.getVerificationToken(),
-                    confirmMerge
+                    true // Always confirm merge automatically
             );
             return ResponseEntity.ok(response);
-        } catch (AccountConflictException e) {
-            log.info("Account conflict detected during registration: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("conflict", true);
-            errorResponse.put("email", e.getEmail());
-            errorResponse.put("existingProvider", e.getExistingProvider());
-            errorResponse.put("newProvider", e.getNewProvider());
-            errorResponse.put("message", String.format(
-                "An account with email %s already exists using %s authentication. " +
-                "Do you want to merge your accounts?", e.getEmail(), e.getExistingProvider()));
-            return ResponseEntity.status(409).body(errorResponse);
         } catch (Exception e) {
             log.error("Error completing registration: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
