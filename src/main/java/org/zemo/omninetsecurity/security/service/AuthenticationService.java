@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.zemo.omninetsecurity.security.dto.ApiResponse;
+import org.zemo.omninetsecurity.security.model.RefreshToken;
 import org.zemo.omninetsecurity.security.model.User;
 import org.zemo.omninetsecurity.security.repository.UserRepository;
 
@@ -21,9 +22,11 @@ public class AuthenticationService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
-    public ApiResponse<Map<String, Object>> authenticateUser(String email, String password) {
+    public ApiResponse<Map<String, Object>> authenticateUser(String email, String password, String userAgent, String ipAddress) {
         try {
             log.info("Attempting email/password authentication for: {}", email);
 
@@ -46,8 +49,16 @@ public class AuthenticationService {
             user.setLastLoginAt(LocalDateTime.now());
             user = userRepository.save(user);
 
+            // Generate JWT tokens
+            String accessToken = jwtService.generateAccessToken(user);
+            RefreshToken refreshToken = refreshTokenService.createRefreshToken(user, userAgent, ipAddress);
+
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("user", user);
+            responseData.put("accessToken", accessToken);
+            responseData.put("refreshToken", refreshToken.getToken());
+            responseData.put("tokenType", "Bearer");
+            responseData.put("expiresIn", jwtService.getAccessTokenExpiration());
             responseData.put("authMethod", "email");
             responseData.put("hasMultipleProviders", user.isAccountMerged());
 
@@ -123,6 +134,61 @@ public class AuthenticationService {
         } catch (Exception e) {
             log.error("Error adding password to OAuth account: {}", e.getMessage(), e);
             return ApiResponse.error("Failed to add password authentication");
+        }
+    }
+
+    public ApiResponse<Map<String, Object>> refreshToken(String refreshTokenString) {
+        try {
+            Optional<String> newAccessToken = refreshTokenService.refreshAccessToken(refreshTokenString);
+
+            if (newAccessToken.isEmpty()) {
+                return ApiResponse.error("Invalid or expired refresh token");
+            }
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("accessToken", newAccessToken.get());
+            responseData.put("tokenType", "Bearer");
+            responseData.put("expiresIn", jwtService.getAccessTokenExpiration());
+
+            return ApiResponse.success(responseData, "Token refreshed successfully");
+
+        } catch (Exception e) {
+            log.error("Error refreshing token: {}", e.getMessage(), e);
+            return ApiResponse.error("Failed to refresh token");
+        }
+    }
+
+    @Transactional
+    public ApiResponse<Map<String, Object>> logout(String refreshTokenString) {
+        try {
+            if (refreshTokenString != null && !refreshTokenString.trim().isEmpty()) {
+                refreshTokenService.revokeToken(refreshTokenString);
+            }
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("message", "Logged out successfully");
+
+            return ApiResponse.success(responseData, "Logout successful");
+
+        } catch (Exception e) {
+            log.error("Error during logout: {}", e.getMessage(), e);
+            return ApiResponse.error("Logout failed");
+        }
+    }
+
+    @Transactional
+    public ApiResponse<Map<String, Object>> logoutAll(String userId) {
+        try {
+            refreshTokenService.revokeAllUserTokens(userId);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("message", "Logged out from all devices successfully");
+
+            return ApiResponse.success(responseData, "Logout from all devices successful");
+
+        } catch (Exception e) {
+            log.error("Error during logout all: {}", e.getMessage(), e);
+            return ApiResponse.error("Logout from all devices failed");
         }
     }
 }

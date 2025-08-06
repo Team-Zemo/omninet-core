@@ -12,13 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class CleanupService {
 
     private final EmailRegistrationService emailRegistrationService;
+    private final RefreshTokenService refreshTokenService;
 
     @Scheduled(fixedRate = 300000) // Run every 5 minutes
     @Transactional
     public void cleanupExpiredRecords() {
         try {
             emailRegistrationService.cleanupExpiredRecords();
-            log.debug("Completed scheduled cleanup of expired verification records");
+            refreshTokenService.cleanupExpiredTokens();
+            log.debug("Completed scheduled cleanup of expired verification records and refresh tokens");
         } catch (Exception e) {
             log.error("Error during scheduled cleanup: {}", e.getMessage(), e);
         }

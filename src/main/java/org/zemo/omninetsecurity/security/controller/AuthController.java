@@ -4,19 +4,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.zemo.omninetsecurity.security.dto.ApiResponse;
 import org.zemo.omninetsecurity.security.dto.EmailLoginRequest;
 import org.zemo.omninetsecurity.security.model.User;
 import org.zemo.omninetsecurity.security.service.AuthenticationService;
 import org.zemo.omninetsecurity.security.service.UserService;
+import org.zemo.omninetsecurity.security.util.HttpUtils;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -29,31 +28,31 @@ public class AuthController {
     private final AuthenticationService authenticationService;
 
     @GetMapping("/user")
-    public ResponseEntity<User> getCurrentUser(@AuthenticationPrincipal OAuth2User principal) {
-        if (principal == null) {
-            return ResponseEntity.status(401).build();
+    public ResponseEntity<ApiResponse<User>> getCurrentUser(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("User not authenticated"));
         }
 
-        String providerId = getUserId(principal);
-        Optional<User> userOpt = userService.getUserById(providerId);
+        // Update last login time
+        user.setLastLoginAt(LocalDateTime.now());
+        user = userService.saveUser(user);
 
-        User user;
-        if (userOpt.isPresent()) {
-            user = userOpt.get();
-            user.setLastLoginAt(LocalDateTime.now());
-            user = userService.saveUser(user);
-        } else {
-            user = userService.saveOrUpdateUser(principal);
-        }
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(ApiResponse.success(user, "User retrieved successfully"));
     }
 
     @PostMapping("/login/email")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> loginWithEmail(@Valid @RequestBody EmailLoginRequest request) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> loginWithEmail(
+            @Valid @RequestBody EmailLoginRequest request,
+            HttpServletRequest httpRequest) {
         try {
+            String userAgent = httpRequest.getHeader("User-Agent");
+            String ipAddress = HttpUtils.getClientIpAddress(httpRequest);
+
             ApiResponse<Map<String, Object>> response = authenticationService.authenticateUser(
                 request.getEmail(),
-                request.getPassword()
+                request.getPassword(),
+                userAgent,
+                ipAddress
             );
 
             if (response.isSuccess()) {
@@ -69,6 +68,63 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> refreshToken(@RequestBody Map<String, String> request) {
+        try {
+            String refreshToken = request.get("refreshToken");
+            if (refreshToken == null || refreshToken.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Refresh token is required")
+                );
+            }
+
+            ApiResponse<Map<String, Object>> response = authenticationService.refreshToken(refreshToken);
+
+            if (response.isSuccess()) {
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            log.error("Error refreshing token: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(
+                ApiResponse.error("Token refresh failed")
+            );
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> logout(@RequestBody Map<String, String> request) {
+        try {
+            String refreshToken = request.get("refreshToken");
+            ApiResponse<Map<String, Object>> response = authenticationService.logout(refreshToken);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error during logout: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(
+                ApiResponse.error("Logout failed")
+            );
+        }
+    }
+
+    @PostMapping("/logout-all")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> logoutAll(@AuthenticationPrincipal User user) {
+        try {
+            if (user == null) {
+                return ResponseEntity.status(401).body(ApiResponse.error("User not authenticated"));
+            }
+
+            ApiResponse<Map<String, Object>> response = authenticationService.logoutAll(user.getId());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error during logout all: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(
+                ApiResponse.error("Logout from all devices failed")
+            );
+        }
+    }
+
     @GetMapping("/check-methods")
     public ResponseEntity<ApiResponse<Map<String, Object>>> checkAuthenticationMethods(@RequestParam String email) {
         try {
@@ -79,39 +135,6 @@ public class AuthController {
             return ResponseEntity.badRequest().body(
                 ApiResponse.error("Error checking authentication methods")
             );
-        }
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Logged out successfully");
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/merge-accounts")
-    public ResponseEntity<Map<String, Object>> mergeAccounts(@AuthenticationPrincipal OAuth2User principal,
-                                                             @RequestParam(defaultValue = "true") boolean confirm) {
-        if (principal == null) {
-            return ResponseEntity.status(401).build();
-        }
-
-        try {
-            User mergedUser = userService.saveOrUpdateUser(principal, confirm);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Accounts merged successfully");
-            response.put("user", mergedUser);
-            response.put("mergedProviders", mergedUser.getLinkedProviders());
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Failed to merge accounts: " + e.getMessage());
-
-            return ResponseEntity.badRequest().body(response);
         }
     }
 
@@ -133,19 +156,5 @@ public class AuthController {
                 ApiResponse.error("Failed to add password authentication")
             );
         }
-    }
-
-    private String getUserId(OAuth2User principal) {
-        Object id = principal.getAttribute("id");
-        if (id != null) {
-            return id.toString();
-        }
-
-        Object sub = principal.getAttribute("sub");
-        if (sub != null) {
-            return sub.toString();
-        }
-
-        return principal.getName();
     }
 }
