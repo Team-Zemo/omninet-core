@@ -9,9 +9,7 @@ import org.zemo.omninetsecurity.security.model.User;
 import org.zemo.omninetsecurity.security.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 
@@ -21,10 +19,6 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
-
-    public User saveOrUpdateUser(OAuth2User principal) {
-        return saveOrUpdateUser(principal, false);
-    }
 
     public User saveOrUpdateUser(OAuth2User principal, boolean confirmMerge) {
         String providerId = getUserId(principal);
@@ -147,5 +141,12 @@ public class UserService {
 
     public User saveUser(User user) {
         return userRepository.save(user);
+    }
+
+    public List<String> getAllUserIds() {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(User::getId)
+                .toList();
     }
 }
