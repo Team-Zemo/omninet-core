@@ -1,3 +1,5 @@
+# example application.properties
+
 spring.application.name=omninet-security
 server.port=8080
 
