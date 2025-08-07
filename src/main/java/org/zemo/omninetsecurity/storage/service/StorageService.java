@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.zemo.omninetsecurity.security.service.UserService;
 
 import jakarta.annotation.PostConstruct;
+
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -310,7 +311,7 @@ public class StorageService {
     /**
      * Generates a presigned URL for downloading a file from MinIO.
      *
-     * @param userId     The ID of the user who owns the file.
+     * @param userId   The ID of the user who owns the file.
      * @param fileName The name of the file to download. (e.g., "documents/report.pdf")
      * @return A presigned URL that can be used to download the file.
      */
@@ -342,7 +343,7 @@ public class StorageService {
     /**
      * Deletes a file from the MinIO bucket.
      *
-     * @param userId     The ID of the user who owns the file.
+     * @param userId   The ID of the user who owns the file.
      * @param fileName The name of the file to delete. (e.g., "documents/report.pdf")
      */
     public void deleteFile(String userId, String fileName) {
@@ -398,6 +399,78 @@ public class StorageService {
 
         } catch (Exception e) {
             throw new RuntimeException("Error listing objects in folder in MinIO", e);
+        }
+    }
+
+
+    /**
+     * Method to directly upload a file to a specific folder in the MinIO bucket.
+     * This method is useful for uploading files without generating a presigned URL.
+     * Primarily used for internal operations or administrative tasks.
+     *
+     * @param fileName The name of the file to upload (e.g., "system/logo.jpg")
+     * @return true if the file was uploaded successfully, false if it already exists.
+     */
+    public boolean uploadFile(String fileName, byte[] fileData) {
+        try {
+            if (fileName == null || fileName.isEmpty()) {
+                throw new IllegalArgumentException("File name must not be null or empty");
+            }
+
+            if (fileData == null || fileData.length == 0) {
+                throw new IllegalArgumentException("File data must not be null or empty");
+            }
+
+            if (fileExists(fileName)) {
+                log.warn("File already exists, will be overwritten: {}", fileName);
+            }
+
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(fileName)
+                            .stream(new ByteArrayInputStream(fileData), fileData.length, -1)
+                            .build());
+
+            log.info("Successfully uploaded file: {} to bucket: {}", fileName, bucketName);
+            return true;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error uploading file to MinIO", e);
+        }
+    }
+
+    /**
+     * Method to directly download a file from a specific folder in the MinIO bucket.
+     * This method is useful for downloading files without generating a presigned URL.
+     * Primarily used for internal operations or administrative tasks.
+     *
+     * @param fileName The name of the file to download (e.g., "system/logo.jpg")
+     * @return byte array of the file data if the file exists, null otherwise.
+     */
+    public byte[] downloadFile(String fileName) {
+        try {
+            if (fileName == null || fileName.isEmpty()) {
+                throw new IllegalArgumentException("File name must not be null or empty");
+            }
+
+            if (!fileExists(fileName)) {
+                log.warn("File does not exist: {}", fileName);
+                return null;
+            }
+
+            GetObjectResponse response = minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(fileName)
+                            .build());
+
+            byte[] fileData = response.readAllBytes();
+            response.close();
+            return fileData;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error downloading file from MinIO", e);
         }
     }
 }
