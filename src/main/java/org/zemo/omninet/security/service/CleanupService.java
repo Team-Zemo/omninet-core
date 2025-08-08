@@ -1,0 +1,28 @@
+package org.zemo.omninet.security.service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class CleanupService {
+
+    private final EmailRegistrationService emailRegistrationService;
+    private final RefreshTokenService refreshTokenService;
+
+    @Scheduled(fixedRate = 300000) // Run every 5 minutes
+    @Transactional
+    public void cleanupExpiredRecords() {
+        try {
+            emailRegistrationService.cleanupExpiredRecords();
+            refreshTokenService.cleanupExpiredTokens();
+            log.debug("Completed scheduled cleanup of expired verification records and refresh tokens");
+        } catch (Exception e) {
+            log.error("Error during scheduled cleanup: {}", e.getMessage(), e);
+        }
+    }
+}
