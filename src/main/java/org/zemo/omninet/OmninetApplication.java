@@ -6,10 +6,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-public class OmninetSecurityApplication {
+public class OmninetApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(OmninetSecurityApplication.class, args);
+        SpringApplication.run(OmninetApplication.class, args);
     }
 
 }
