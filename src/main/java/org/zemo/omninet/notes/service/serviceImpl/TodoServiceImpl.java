@@ -10,6 +10,7 @@ import org.zemo.omninet.notes.enums.TodoStatus;
 import org.zemo.omninet.notes.exception.ResourceNotFoundException;
 import org.zemo.omninet.notes.repository.TodoRepo;
 import org.zemo.omninet.notes.service.TodoService;
+import org.zemo.omninet.notes.util.CommonUtil;
 import org.zemo.omninet.notes.util.Validation;
 
 import java.util.List;
@@ -45,7 +46,7 @@ public class TodoServiceImpl implements TodoService {
 
     @Override
     public TodoDto getTodoById(Integer id) throws ResourceNotFoundException {
-        Todo todo = todoRepo.findById(id).
+        Todo todo = todoRepo.findByIdAndCreatedBy(id, CommonUtil.getLoggedInUser().getEmail()).
                 orElseThrow(() -> new ResourceNotFoundException("todo not found and id invalid"));
         TodoDto todoDto = mapper.map(todo, TodoDto.class);
         setStatus(todoDto, todo);
