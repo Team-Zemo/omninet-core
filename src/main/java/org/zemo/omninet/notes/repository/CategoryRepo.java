@@ -14,8 +14,8 @@ public interface CategoryRepo extends JpaRepository<Category, Integer> {
 
     List<Category> findByIsDeletedFalse();
 
-    List<Category> findByIsActiveTrueAndIsDeletedFalse();
 
-    boolean existsByName(String name);
+    boolean existsByNameAndCreatedBy(String trim, String email);
 
+    List<Category> findByIsActiveTrueAndIsDeletedFalseAndCreatedBy(String email);
 }
