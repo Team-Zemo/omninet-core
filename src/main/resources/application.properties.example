@@ -47,3 +47,30 @@ minio.url=http://localhost:9090
 minio.access-key=uday
 minio.secret-key=Uday@88717
 minio.bucket.name=omninet
+
+#surendra
+
+# --- Added from YAML; not overwriting existing values, just appending missing ones ---
+
+spring.servlet.multipart.max-file-size=50MB
+spring.servlet.multipart.max-request-size=50MB
+
+spring.profiles.active=dev
+
+file.upload.path=files/
+
+# springdoc configuration
+springdoc.api-docs.path=/Omninet-api-doc
+springdoc.swagger-ui.path=/Omninet-doc
+springdoc.swagger-ui.operations-sorter=method
+springdoc.swagger-ui.tags-sorter=alpha
+springdoc.swagger-ui.doc-expansion=none
+springdoc.swagger-ui.display-request-duration=true
+springdoc.swagger-ui.filter=true
+
+# management/actuator configuration
+management.endpoints.web.exposure.include=*
+management.endpoints.web.exposure.exclude=beans,loggers
+management.endpoint.shutdown.enabled=true
+
+management.endpoint.health.show-details=always

@@ -27,14 +27,14 @@ public class RefreshTokenService {
     public RefreshToken createRefreshToken(User user, String userAgent, String ipAddress) {
         // Limit the number of active refresh tokens per user (max 5 devices)
         cleanupExcessiveTokens(user.getId(), 4);
-        
+
         String tokenString = jwtService.generateRefreshToken(user);
         LocalDateTime expiresAt = LocalDateTime.now().plus(jwtService.getRefreshTokenExpiration(), ChronoUnit.MILLIS);
-        
+
         RefreshToken refreshToken = new RefreshToken(tokenString, user.getId(), expiresAt);
         refreshToken.setUserAgent(userAgent);
         refreshToken.setIpAddress(ipAddress);
-        
+
         return refreshTokenRepository.save(refreshToken);
     }
 
@@ -47,14 +47,14 @@ public class RefreshTokenService {
             }
 
             Optional<RefreshToken> refreshTokenOpt = refreshTokenRepository.findByTokenAndRevokedFalse(refreshTokenString);
-            
+
             if (refreshTokenOpt.isEmpty()) {
                 log.warn("Refresh token not found in database");
                 return Optional.empty();
             }
 
             RefreshToken refreshToken = refreshTokenOpt.get();
-            
+
             if (!refreshToken.isValid()) {
                 log.warn("Refresh token is expired or revoked");
                 refreshTokenRepository.delete(refreshToken);
@@ -70,7 +70,7 @@ public class RefreshTokenService {
 
             User user = userOpt.get();
             String newAccessToken = jwtService.generateAccessToken(user);
-            
+
             log.info("Successfully refreshed access token for user: {}", user.getEmail());
             return Optional.of(newAccessToken);
 

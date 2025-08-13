@@ -28,9 +28,9 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
-                         CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
-                         JwtAuthenticationFilter jwtAuthenticationFilter,
-                         JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+                          CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
+                          JwtAuthenticationFilter jwtAuthenticationFilter,
+                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
@@ -45,31 +45,43 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(exceptions -> exceptions
-                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-            )
-            .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/", "/login", "/error", "/webjars/**", "/css/**", "/js/**", "/merge-confirmation").permitAll()
-                .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
-                .requestMatchers("/api/auth/register/**", "/api/auth/verify-otp", "/api/auth/complete-registration").permitAll()
-                .requestMatchers("/api/auth/login/email", "/api/auth/check-methods").permitAll()
-                .requestMatchers("/api/auth/refresh-token", "/api/auth/logout").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/auth/user").authenticated()
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().authenticated()
-            )
-            .oauth2Login(oauth2 -> oauth2
-                .loginPage("/login")
-                .successHandler(customAuthenticationSuccessHandler)
-                .failureUrl("/login?error=true")
-                .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 )
-            )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/",
+                                "/login",
+                                "/error",
+                                "/webjars/**",
+                                "/css/**", "/js/**",
+                                "/merge-confirmation",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**",
+                                "/webjars/**",
+                                "/Omninet-doc/**",
+                                "/Omninet-api-doc/**",
+                                "/actuator/**").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+                        .requestMatchers("/api/auth/register/**", "/api/auth/verify-otp", "/api/auth/complete-registration").permitAll()
+                        .requestMatchers("/api/auth/login/email", "/api/auth/check-methods").permitAll()
+                        .requestMatchers("/api/auth/refresh-token", "/api/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/user").authenticated()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")
+                        .successHandler(customAuthenticationSuccessHandler)
+                        .failureUrl("/login?error=true")
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

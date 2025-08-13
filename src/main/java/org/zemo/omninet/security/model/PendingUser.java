@@ -1,9 +1,9 @@
 package org.zemo.omninet.security.model;
 
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 

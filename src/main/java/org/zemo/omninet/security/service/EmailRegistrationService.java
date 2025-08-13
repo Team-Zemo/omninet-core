@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.zemo.omninet.notes.exception.SuccessException;
 import org.zemo.omninet.security.model.EmailVerification;
 import org.zemo.omninet.security.model.PendingUser;
 import org.zemo.omninet.security.model.User;
@@ -41,7 +42,7 @@ public class EmailRegistrationService {
         if (existingUser.isPresent()) {
             User user = existingUser.get();
             if ("email".equals(user.getRegistrationSource())) {
-                throw new RuntimeException("An account with this email already exists. Please try logging in.");
+                throw new SuccessException("An account with this email already exists. Please try logging in.");
             } else {
                 log.info("OAuth user exists for email: {}, will handle merge during completion", email);
             }
@@ -103,8 +104,8 @@ public class EmailRegistrationService {
             User user = existingUser.get();
             response.put("existingProvider", user.getProvider());
             response.put("conflictMessage", String.format(
-                "An account with this email already exists using %s authentication. " +
-                "Completing registration will merge your accounts.", user.getProvider()));
+                    "An account with this email already exists using %s authentication. " +
+                            "Completing registration will merge your accounts.", user.getProvider()));
         }
 
         PendingUser pendingUser = new PendingUser();
@@ -120,7 +121,7 @@ public class EmailRegistrationService {
 
     @Transactional
     public Map<String, Object> completeRegistration(String email, String name, String password,
-                                                   String verificationToken, boolean confirmMerge) {
+                                                    String verificationToken, boolean confirmMerge) {
         log.info("Completing registration for email: {}", email);
 
         Optional<PendingUser> pendingUserOpt = pendingUserRepository.findByVerificationToken(verificationToken);

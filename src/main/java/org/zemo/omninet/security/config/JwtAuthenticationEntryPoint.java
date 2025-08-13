@@ -21,18 +21,18 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
-                        AuthenticationException authException) throws IOException, ServletException {
-        
+                         AuthenticationException authException) throws IOException, ServletException {
+
         log.warn("Unauthorized access attempt to: {} - {}", request.getRequestURI(), authException.getMessage());
-        
+
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        
+
         ApiResponse<Object> errorResponse = ApiResponse.error(
-            "Authentication required", 
-            "Please provide a valid access token"
+                "Authentication required",
+                "Please provide a valid access token"
         );
-        
+
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 }
