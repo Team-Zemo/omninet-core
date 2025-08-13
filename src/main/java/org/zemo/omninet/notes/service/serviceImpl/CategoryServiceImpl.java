@@ -12,6 +12,7 @@ import org.zemo.omninet.notes.exception.ExistDataException;
 import org.zemo.omninet.notes.exception.ResourceNotFoundException;
 import org.zemo.omninet.notes.repository.CategoryRepo;
 import org.zemo.omninet.notes.service.CategoryService;
+import org.zemo.omninet.notes.util.CommonUtil;
 import org.zemo.omninet.notes.util.Validation;
 
 import java.util.List;
@@ -40,7 +41,7 @@ public class CategoryServiceImpl implements CategoryService {
 
 
         // check exist before it so throw an error
-        boolean exist = categoryRepo.existsByName(categoryDto.getName().trim());
+        boolean exist = categoryRepo.existsByNameAndCreatedBy(categoryDto.getName().trim(), CommonUtil.getLoggedInUser().getEmail());
         if (exist) {
             throw new ExistDataException("Category already exists");
         }
@@ -91,7 +92,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryResponse> getActiveCategories() {
-        List<Category> categories = categoryRepo.findByIsActiveTrueAndIsDeletedFalse();
+        List<Category> categories = categoryRepo.findByIsActiveTrueAndIsDeletedFalseAndCreatedBy(CommonUtil.getLoggedInUser().getEmail());
 
         List<CategoryResponse> categoryResponses = categories.stream()
                 .map(category -> mapper.map(category, CategoryResponse.class))  // map each item
