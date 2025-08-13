@@ -4,12 +4,11 @@ import io.minio.*;
 import io.minio.errors.MinioException;
 import io.minio.http.Method;
 import io.minio.messages.Item;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.zemo.omninet.security.service.UserService;
-
-import jakarta.annotation.PostConstruct;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;

@@ -10,7 +10,10 @@ import java.util.Optional;
 @Repository
 public interface PendingUserRepository extends JpaRepository<PendingUser, String> {
     Optional<PendingUser> findByEmail(String email);
+
     Optional<PendingUser> findByVerificationToken(String verificationToken);
+
     void deleteByExpiresAtBefore(LocalDateTime dateTime);
+
     void deleteByEmail(String email);
 }

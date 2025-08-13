@@ -33,7 +33,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                      Authentication authentication) throws IOException, ServletException {
+                                        Authentication authentication) throws IOException, ServletException {
         OAuth2User principal = (OAuth2User) authentication.getPrincipal();
         String userAgent = request.getHeader("User-Agent");
         String ipAddress = HttpUtils.getClientIpAddress(request);

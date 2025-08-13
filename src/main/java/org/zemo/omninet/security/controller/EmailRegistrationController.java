@@ -1,5 +1,6 @@
 package org.zemo.omninet.security.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -10,7 +11,6 @@ import org.zemo.omninet.security.dto.EmailRegistrationRequest;
 import org.zemo.omninet.security.dto.OtpVerificationRequest;
 import org.zemo.omninet.security.service.EmailRegistrationService;
 
-import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 

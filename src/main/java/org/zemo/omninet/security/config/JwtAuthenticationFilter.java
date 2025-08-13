@@ -30,7 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                  FilterChain filterChain) throws ServletException, IOException {
+                                    FilterChain filterChain) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
@@ -65,9 +65,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     User user = userOpt.get();
 
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        user,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                            user,
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_USER"))
                     );
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -92,18 +92,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Skip JWT filter for OAuth2 endpoints and public endpoints
         return path.startsWith("/oauth2/") ||
-               path.startsWith("/login/oauth2/") ||
-               path.equals("/") ||
-               path.equals("/login") ||
-               path.equals("/error") ||
-               path.startsWith("/webjars/") ||
-               path.startsWith("/css/") ||
-               path.startsWith("/js/") ||
-               path.startsWith("/api/auth/register/") ||
-               path.equals("/api/auth/verify-otp") ||
-               path.equals("/api/auth/complete-registration") ||
-               path.equals("/api/auth/login/email") ||
-               path.equals("/api/auth/check-methods") ||
-               path.equals("/api/auth/refresh-token");
+                path.startsWith("/login/oauth2/") ||
+                path.equals("/") ||
+                path.equals("/login") ||
+                path.equals("/error") ||
+                path.startsWith("/webjars/") ||
+                path.startsWith("/css/") ||
+                path.startsWith("/js/") ||
+                path.startsWith("/api/auth/register/") ||
+                path.equals("/api/auth/verify-otp") ||
+                path.equals("/api/auth/complete-registration") ||
+                path.equals("/api/auth/login/email") ||
+                path.equals("/api/auth/check-methods") ||
+                path.equals("/api/auth/refresh-token");
     }
 }

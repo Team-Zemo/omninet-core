@@ -1,5 +1,7 @@
 package org.zemo.omninet.security.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -12,14 +14,12 @@ import org.zemo.omninet.security.service.AuthenticationService;
 import org.zemo.omninet.security.service.UserService;
 import org.zemo.omninet.security.util.HttpUtils;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001","http://localhost:5173"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
@@ -49,10 +49,10 @@ public class AuthController {
             String ipAddress = HttpUtils.getClientIpAddress(httpRequest);
 
             ApiResponse<Map<String, Object>> response = authenticationService.authenticateUser(
-                request.getEmail(),
-                request.getPassword(),
-                userAgent,
-                ipAddress
+                    request.getEmail(),
+                    request.getPassword(),
+                    userAgent,
+                    ipAddress
             );
 
             if (response.isSuccess()) {
@@ -63,7 +63,7 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error during email login: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(
-                ApiResponse.error("Login failed", e.getMessage())
+                    ApiResponse.error("Login failed", e.getMessage())
             );
         }
     }
@@ -74,7 +74,7 @@ public class AuthController {
             String refreshToken = request.get("refreshToken");
             if (refreshToken == null || refreshToken.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(
-                    ApiResponse.error("Refresh token is required")
+                        ApiResponse.error("Refresh token is required")
                 );
             }
 
@@ -88,7 +88,7 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error refreshing token: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(
-                ApiResponse.error("Token refresh failed")
+                    ApiResponse.error("Token refresh failed")
             );
         }
     }
@@ -103,7 +103,7 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error during logout: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(
-                ApiResponse.error("Logout failed")
+                    ApiResponse.error("Logout failed")
             );
         }
     }
@@ -120,7 +120,7 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error during logout all: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(
-                ApiResponse.error("Logout from all devices failed")
+                    ApiResponse.error("Logout from all devices failed")
             );
         }
     }
@@ -133,7 +133,7 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error checking authentication methods: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(
-                ApiResponse.error("Error checking authentication methods")
+                    ApiResponse.error("Error checking authentication methods")
             );
         }
     }
@@ -153,7 +153,7 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error adding password to account: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(
-                ApiResponse.error("Failed to add password authentication")
+                    ApiResponse.error("Failed to add password authentication")
             );
         }
     }

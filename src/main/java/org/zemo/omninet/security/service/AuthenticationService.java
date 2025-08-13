@@ -39,7 +39,7 @@ public class AuthenticationService {
 
             if (!user.hasPassword()) {
                 return ApiResponse.error("Password authentication not available for this account. Please use " +
-                    user.getProvider() + " to sign in, or set up password authentication.");
+                        user.getProvider() + " to sign in, or set up password authentication.");
             }
 
             if (!passwordEncoder.matches(password, user.getPassword())) {
