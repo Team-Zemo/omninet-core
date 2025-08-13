@@ -67,7 +67,6 @@ public class Validation {
         for (TodoStatus status : TodoStatus.values()) {
             if (status.getId().equals(reqStatus.getId())) {
                 statusFound = true;
-
                 break;
             }
         }

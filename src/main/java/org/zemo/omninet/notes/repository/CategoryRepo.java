@@ -10,12 +10,15 @@ import java.util.Optional;
 public interface CategoryRepo extends JpaRepository<Category, Integer> {
 
 
-    Optional<Category> findByIdAndIsDeletedFalse(Integer id);
 
     List<Category> findByIsDeletedFalse();
 
 
-    boolean existsByNameAndCreatedBy(String trim, String email);
-
     List<Category> findByIsActiveTrueAndIsDeletedFalseAndCreatedBy(String email);
+
+    Optional<Category> findByIdAndCreatedBy(Integer id, String email);
+
+    Optional<Category> findByIdAndIsDeletedFalseAndCreatedBy(Integer id, String email);
+
+    boolean existsByNameAndCreatedByAndIsDeletedFalse(String trim, String email);
 }

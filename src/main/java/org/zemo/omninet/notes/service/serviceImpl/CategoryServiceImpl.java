@@ -41,7 +41,7 @@ public class CategoryServiceImpl implements CategoryService {
 
 
         // check exist before it so throw an error
-        boolean exist = categoryRepo.existsByNameAndCreatedBy(categoryDto.getName().trim(), CommonUtil.getLoggedInUser().getEmail());
+        boolean exist = categoryRepo.existsByNameAndCreatedByAndIsDeletedFalse(categoryDto.getName().trim(), CommonUtil.getLoggedInUser().getEmail());
         if (exist) {
             throw new ExistDataException("Category already exists");
         }
@@ -64,7 +64,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     private void updateCategory(Category category) {
-        Optional<Category> findById = categoryRepo.findById(category.getId());
+        Optional<Category> findById = categoryRepo.findByIdAndCreatedBy(category.getId(),CommonUtil.getLoggedInUser().getEmail());
         if (findById.isPresent()) {
             Category existCategory = findById.get();
             category.setCreatedBy(existCategory.getCreatedBy());
@@ -103,7 +103,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryDto getCategoryById(Integer id) throws ResourceNotFoundException {
-        Category category = categoryRepo.findByIdAndIsDeletedFalse(id)
+        Category category = categoryRepo.findByIdAndIsDeletedFalseAndCreatedBy(id,CommonUtil.getLoggedInUser().getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with the id " + id));
 
         return mapper.map(category, CategoryDto.class);
@@ -112,7 +112,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public Boolean deleteCategoryById(Integer id) {
-        Optional<Category> category = categoryRepo.findById(id);
+        Optional<Category> category = categoryRepo.findByIdAndCreatedBy(id,CommonUtil.getLoggedInUser().getEmail());
 
         if (category.isPresent()) {
             category.get().setIsDeleted(true);
