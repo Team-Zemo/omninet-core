@@ -61,6 +61,7 @@ public class AuthenticationService {
             responseData.put("expiresIn", jwtService.getAccessTokenExpiration());
             responseData.put("authMethod", "email");
             responseData.put("hasMultipleProviders", user.isAccountMerged());
+            responseData.put("role","ROLE_USER");
 
             return ApiResponse.success(responseData, "Authentication successful");
 

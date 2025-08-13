@@ -149,4 +149,11 @@ public class UserService {
                 .map(User::getId)
                 .toList();
     }
+
+    public List<String> getAllUserEmails() {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(User::getEmail)
+                .toList();
+    }
 }

@@ -2,6 +2,7 @@ package org.zemo.omninet.storage.controller;
 
 import io.minio.Result;
 import io.minio.messages.Item;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,45 +11,42 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.zemo.omninet.notes.util.CommonUtil;
 import org.zemo.omninet.storage.dto.*;
 import org.zemo.omninet.storage.service.StorageService;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/storage")
 @Validated
-@Tag(name = "Storage Related", description = "please uday bhai complete kro ise")
+@Tag(name = "Storage Related")
 public class StorageController {
 
     private final StorageService storageService;
 
     /**
-     * Extract user ID from authentication object
+     * Extract user Email from authentication object
      */
-    private String getUserId(Authentication authentication) {
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof org.zemo.omninet.security.model.User) {
-            return ((org.zemo.omninet.security.model.User) principal).getId();
-        }
-        // Fallback to authentication name if it's already a string ID
-        return authentication.getName();
+    private String getUserEmail() {
+        return Objects.requireNonNull(CommonUtil.getLoggedInUser()).getEmail();
     }
 
     /**
      * Create a folder for the authenticated user
      */
+    @Operation(description = "Api to create a folder.\n Should provide full path eg- \"pop\", \"pop/opo\"")
     @PostMapping("/folders")
     public ResponseEntity<StorageResponse> createFolder(
-            @Valid @RequestBody CreateFolderRequest request,
-            Authentication authentication) {
+            @Valid @RequestBody CreateFolderRequest request) {
         try {
-            String userId = getUserId(authentication);
-            boolean created = storageService.createUserFolder(userId, request.getFolderName());
+            String userEmail = getUserEmail();
+            boolean created = storageService.createUserFolder(userEmail, request.getFolderName());
 
             if (created) {
                 return ResponseEntity.ok(StorageResponse.success("Folder created successfully"));
@@ -56,7 +54,7 @@ public class StorageController {
                 return ResponseEntity.ok(StorageResponse.error("Folder already exists"));
             }
         } catch (Exception e) {
-            log.error("Error creating folder for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error creating folder for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to create folder: " + e.getMessage()));
         }
@@ -65,17 +63,17 @@ public class StorageController {
     /**
      * Delete a folder for the authenticated user
      */
+    @Operation(description = "Api to delete a folder.\n Should provide full path eg- \"pop\", \"pop/opo\"")
     @DeleteMapping("/folders")
     public ResponseEntity<StorageResponse> deleteFolder(
-            @Valid @RequestBody DeleteFolderRequest request,
-            Authentication authentication) {
+            @Valid @RequestBody DeleteFolderRequest request) {
         try {
             log.info("Deleting folder {}", request.getFolderName());
-            String userId = getUserId(authentication);
-            storageService.deleteUserFolder(userId, request.getFolderName());
+            String userEmail = getUserEmail();
+            storageService.deleteUserFolder(userEmail, request.getFolderName());
             return ResponseEntity.ok(StorageResponse.success("Folder deleted successfully"));
         } catch (Exception e) {
-            log.error("Error deleting folder for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error deleting folder for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to delete folder: " + e.getMessage()));
         }
@@ -84,18 +82,17 @@ public class StorageController {
     /**
      * Generate a presigned URL for file upload
      */
+    @Operation(description = "Api to get a PreSignedUrl to upload a file.")
     @PostMapping("/files/upload-url")
-    public ResponseEntity<StorageResponse> generateUploadUrl(
-            @Valid @RequestBody FileUploadRequest request,
-            Authentication authentication) {
+    public ResponseEntity<StorageResponse> generateUploadUrl(@Valid @RequestBody FileUploadRequest request) {
         try {
-            String userId = getUserId(authentication);
-            String presignedUrl = storageService.generatePresignedUploadUrl(userId, request.getFileName());
+            String userEmail = getUserEmail();
+            String presignedUrl = storageService.generatePresignedUploadUrl(userEmail, request.getFileName());
 
             PresignedUrlResponse response = new PresignedUrlResponse(presignedUrl, request.getFileName());
             return ResponseEntity.ok(StorageResponse.success("Upload URL generated successfully", response));
         } catch (Exception e) {
-            log.error("Error generating upload URL for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error generating upload URL for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to generate upload URL: " + e.getMessage()));
         }
@@ -104,18 +101,18 @@ public class StorageController {
     /**
      * Generate a presigned URL for file download
      */
+    @Operation(description = "Api to get a PreSignedUrl to download a file.")
     @PostMapping("/files/download-url")
     public ResponseEntity<StorageResponse> generateDownloadUrl(
-            @Valid @RequestBody FileDownloadRequest request,
-            Authentication authentication) {
+            @Valid @RequestBody FileDownloadRequest request) {
         try {
-            String userId = getUserId(authentication);
-            String presignedUrl = storageService.generatePresignedDownloadUrl(userId, request.getFileName());
+            String userEmail = getUserEmail();
+            String presignedUrl = storageService.generatePresignedDownloadUrl(userEmail, request.getFileName());
 
             PresignedUrlResponse response = new PresignedUrlResponse(presignedUrl, request.getFileName());
             return ResponseEntity.ok(StorageResponse.success("Download URL generated successfully", response));
         } catch (Exception e) {
-            log.error("Error generating download URL for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error generating download URL for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to generate download URL: " + e.getMessage()));
         }
@@ -124,16 +121,16 @@ public class StorageController {
     /**
      * Delete a file for the authenticated user
      */
+    @Operation(description = "Api to delete a file")
     @DeleteMapping("/files/{fileName}")
     public ResponseEntity<StorageResponse> deleteFile(
-            @PathVariable String fileName,
-            Authentication authentication) {
+            @PathVariable String fileName) {
         try {
-            String userId = getUserId(authentication);
-            storageService.deleteFile(userId, fileName);
+            String userEmail = getUserEmail();
+            storageService.deleteFile(userEmail, fileName);
             return ResponseEntity.ok(StorageResponse.success("File deleted successfully"));
         } catch (Exception e) {
-            log.error("Error deleting file for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error deleting file for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to delete file: " + e.getMessage()));
         }
@@ -142,13 +139,13 @@ public class StorageController {
     /**
      * List all files and folders in a specific folder
      */
+    @Operation(description = "Api to get all files and folders in a specific foder")
     @GetMapping("/folders/{folderName}/contents")
     public ResponseEntity<StorageResponse> listFolderContents(
-            @PathVariable String folderName,
-            Authentication authentication) {
+            @PathVariable String folderName) {
         try {
-            String userId = getUserId(authentication);
-            String fullFolderPath = "users/" + userId + "/" + folderName + "/";
+            String userEmail = getUserEmail();
+            String fullFolderPath = "users/" + userEmail + "/" + folderName + "/";
 
             Iterable<Result<Item>> objects = storageService.listObjectsInFolder(fullFolderPath);
             List<FileInfoResponse> fileInfoList = new ArrayList<>();
@@ -205,7 +202,7 @@ public class StorageController {
 
             return ResponseEntity.ok(StorageResponse.success("Folder contents retrieved successfully", fileInfoList));
         } catch (Exception e) {
-            log.error("Error listing folder contents for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error listing folder contents for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to list folder contents: " + e.getMessage()));
         }
@@ -214,18 +211,18 @@ public class StorageController {
     /**
      * Check if a file exists
      */
+    @Operation(description = "Api to check if a file exists.")
     @GetMapping("/files/{fileName}/exists")
     public ResponseEntity<StorageResponse> checkFileExists(
-            @PathVariable String fileName,
-            Authentication authentication) {
+            @PathVariable String fileName) {
         try {
-            String userId = getUserId(authentication);
-            String fullFilePath = "users/" + userId + "/" + fileName;
+            String userEmail = getUserEmail();
+            String fullFilePath = "users/" + userEmail + "/" + fileName;
             boolean exists = storageService.fileExists(fullFilePath);
 
             return ResponseEntity.ok(StorageResponse.success("File existence checked", exists));
         } catch (Exception e) {
-            log.error("Error checking file existence for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error checking file existence for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to check file existence: " + e.getMessage()));
         }
@@ -234,18 +231,18 @@ public class StorageController {
     /**
      * Check if a folder exists
      */
+    @Operation(description = "Api to check if a folder exists.")
     @GetMapping("/folders/{folderName}/exists")
     public ResponseEntity<StorageResponse> checkFolderExists(
-            @PathVariable String folderName,
-            Authentication authentication) {
+            @PathVariable String folderName) {
         try {
-            String userId = getUserId(authentication);
-            String fullFolderPath = "users/" + userId + "/" + folderName + "/";
+            String userEmail = getUserEmail();
+            String fullFolderPath = "users/" + userEmail + "/" + folderName + "/";
             boolean exists = storageService.folderExists(fullFolderPath);
 
             return ResponseEntity.ok(StorageResponse.success("Folder existence checked", exists));
         } catch (Exception e) {
-            log.error("Error checking folder existence for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error checking folder existence for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to check folder existence: " + e.getMessage()));
         }
@@ -254,11 +251,12 @@ public class StorageController {
     /**
      * List all folders in the user's root directory
      */
+    @Operation(description = "Api to list all folders in the user's root directory")
     @GetMapping("/folders")
-    public ResponseEntity<StorageResponse> listUserFolders(Authentication authentication) {
+    public ResponseEntity<StorageResponse> listUserFolders() {
         try {
-            String userId = getUserId(authentication);
-            String userRootPath = "users/" + userId + "/";
+            String userEmail = getUserEmail();
+            String userRootPath = "users/" + userEmail + "/";
 
             Iterable<Result<Item>> objects = storageService.listObjectsInFolder(userRootPath);
             List<FileInfoResponse> folderList = new ArrayList<>();
@@ -286,7 +284,7 @@ public class StorageController {
 
             return ResponseEntity.ok(StorageResponse.success("User folders retrieved successfully", folderList));
         } catch (Exception e) {
-            log.error("Error listing user folders for user {}: {}", getUserId(authentication), e.getMessage());
+            log.error("Error listing user folders for user {}: {}", getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to list user folders: " + e.getMessage()));
         }
