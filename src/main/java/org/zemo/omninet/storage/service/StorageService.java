@@ -83,15 +83,15 @@ public class StorageService {
                 createFolder(root);
             }
 
-            List<String> users = userService.getAllUserIds();
+            List<String> users = userService.getAllUserEmails();
 
-            for (String userId : users) {
-                String userFolder = root + userId + "/";
+            for (String userEmail : users) {
+                String userFolder = root + userEmail + "/";
                 if (!folderExists(userFolder)) {
                     createFolder(userFolder);
-                    log.info("Created folder for user: {}", userId);
+                    log.info("Created folder for user: {}", userEmail);
                 } else {
-                    log.info("Folder already exists for user: {}", userId);
+                    log.info("Folder already exists for user: {}", userEmail);
                 }
             }
         } catch (Exception e) {
@@ -102,21 +102,21 @@ public class StorageService {
     /**
      * Creates folder for a specific user in the MinIO bucket.
      *
-     * @param userId     The ID of the user for whom to create folders.
+     * @param userEmail     The Email of the user for whom to create folders.
      * @param folderName The name of the folder to create (e.g., "profile/", "documents/", "videos/new/").
-     *                   Create a folder like "users/{userId}/{folderName}/".
+     *                   Create a folder like "users/{userEmail}/{folderName}/".
      * @return true if the folder was created successfully, false if it already exists.
      */
-    public boolean createUserFolder(String userId, String folderName) {
+    public boolean createUserFolder(String userEmail, String folderName) {
         try {
-            if (userId == null || userId.isEmpty()) {
+            if (userEmail == null || userEmail.isEmpty()) {
                 throw new IllegalArgumentException("User ID must not be null or empty");
             }
             if (folderName == null || folderName.isEmpty()) {
                 throw new IllegalArgumentException("Folder name must not be null or empty");
             }
 
-            String fullFolderName = "users/" + userId + "/" + folderName;
+            String fullFolderName = "users/" + userEmail + "/" + folderName;
             return createFolder(fullFolderName);
 
         } catch (Exception e) {
@@ -127,12 +127,12 @@ public class StorageService {
     /**
      * Deletes a user folder in the MinIO bucket.
      *
-     * @param userId     The ID of the user whose folder to delete.
+     * @param userEmail     The Email of the user whose folder to delete.
      * @param folderName The name of the folder to delete (e.g., "profile/", "documents/", "videos/new/").
      */
-    public void deleteUserFolder(String userId, String folderName) {
+    public void deleteUserFolder(String userEmail, String folderName) {
         try {
-            if (userId == null || userId.isEmpty()) {
+            if (userEmail == null || userEmail.isEmpty()) {
                 throw new IllegalArgumentException("User ID must not be null or empty");
             }
             if (folderName == null || folderName.isEmpty()) {
@@ -141,7 +141,7 @@ public class StorageService {
             if (!folderName.endsWith("/")) {
                 folderName += "/";
             }
-            String fullFolderName = "users/" + userId + "/" + folderName;
+            String fullFolderName = "users/" + userEmail + "/" + folderName;
             deleteFolder(fullFolderName);
 
         } catch (Exception e) {
@@ -277,18 +277,18 @@ public class StorageService {
     /**
      * Generates a presigned URL for uploading a file to MinIO.
      *
-     * @param userId   The ID of the user who is uploading the file.
+     * @param userEmail   The Email of the user who is uploading the file.
      * @param fileName The name of the file to upload. (e.g., "documents/report.pdf")
      * @return A presigned URL that can be used to upload the file.
      */
-    public String generatePresignedUploadUrl(String userId, String fileName) {
+    public String generatePresignedUploadUrl(String userEmail, String fileName) {
         try {
             if (fileName == null || fileName.isEmpty()) {
                 throw new IllegalArgumentException("File name must not be null or empty");
             }
 
             // Build the full file path
-            String fullFilePath = "users/" + userId + "/" + fileName;
+            String fullFilePath = "users/" + userEmail + "/" + fileName;
 
             if (fileExists(fullFilePath)) {
                 log.warn("File already exists, will be overwritten: {}", fullFilePath);
@@ -310,17 +310,17 @@ public class StorageService {
     /**
      * Generates a presigned URL for downloading a file from MinIO.
      *
-     * @param userId   The ID of the user who owns the file.
+     * @param userEmail   The Email of the user who owns the file.
      * @param fileName The name of the file to download. (e.g., "documents/report.pdf")
      * @return A presigned URL that can be used to download the file.
      */
-    public String generatePresignedDownloadUrl(String userId, String fileName) {
+    public String generatePresignedDownloadUrl(String userEmail, String fileName) {
         try {
             if (fileName == null || fileName.isEmpty()) {
                 throw new IllegalArgumentException("File name must not be null or empty");
             }
 
-            String fullFilePath = "users/" + userId + "/" + fileName;
+            String fullFilePath = "users/" + userEmail + "/" + fileName;
 
             if (!fileExists(fullFilePath)) {
                 throw new IllegalArgumentException("File does not exist: " + fileName);
@@ -342,17 +342,17 @@ public class StorageService {
     /**
      * Deletes a file from the MinIO bucket.
      *
-     * @param userId   The ID of the user who owns the file.
+     * @param userEmail   The ID of the user who owns the file.
      * @param fileName The name of the file to delete. (e.g., "documents/report.pdf")
      */
-    public void deleteFile(String userId, String fileName) {
+    public void deleteFile(String userEmail, String fileName) {
         try {
             if (fileName == null || fileName.isEmpty()) {
                 throw new IllegalArgumentException("File name must not be null or empty");
             }
 
             // Build the full file path
-            String fullFilePath = "users/" + userId + "/" + fileName;
+            String fullFilePath = "users/" + userEmail + "/" + fileName;
 
             // Check if file exists before deleting
             if (!fileExists(fullFilePath)) {
@@ -372,7 +372,7 @@ public class StorageService {
     /**
      * Lists all objects in a specific folder with size in the MinIO bucket.
      *
-     * @param folderName The name of the folder to list objects from (e.g., "users/userID/Images/").
+     * @param folderName The name of the folder to list objects from (e.g., "users/userEmail/Images/").
      * @return A list of object names in the specified folder.
      */
     public Iterable<Result<Item>> listObjectsInFolder(String folderName) {
