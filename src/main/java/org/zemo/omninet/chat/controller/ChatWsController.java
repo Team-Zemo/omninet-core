@@ -7,7 +7,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.socket.messaging.SessionConnectEvent;
+import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 import org.zemo.omninet.chat.dto.MarkReadRequest;
 import org.zemo.omninet.chat.dto.SendMessageDTO;
 import org.zemo.omninet.chat.dto.TypingEvent;
@@ -36,7 +36,7 @@ public class ChatWsController {
     }
 
     @EventListener
-    public void onConnect(SessionConnectEvent e) {
+    public void onConnect(SessionSubscribeEvent e) {
         StompHeaderAccessor sha = StompHeaderAccessor.wrap(e.getMessage());
         String email = sha.getFirstNativeHeader("userEmail");
         if (email != null) messages.deliverPendingOnConnect(email);
