@@ -9,7 +9,7 @@ import org.zemo.omninet.notes.dto.EmailRequest;
 import org.zemo.omninet.notes.entity.Todo;
 import org.zemo.omninet.notes.enums.TodoStatus;
 import org.zemo.omninet.notes.repository.TodoRepo;
-import org.zemo.omninet.notes.repository.UserRepo;
+import org.zemo.omninet.security.repository.UserRepository;
 import org.zemo.omninet.security.model.User;
 
 import java.io.UnsupportedEncodingException;
@@ -24,7 +24,7 @@ public class TodoNotificationService {
     private TodoRepo todoRepo;
 
     @Autowired
-    private UserRepo userRepo;
+    private UserRepository userRepo;
 
     @Autowired
     private NotesEmailService notesEmailService;
@@ -47,7 +47,7 @@ public class TodoNotificationService {
         incompleteTodos.stream()
                 .collect(java.util.stream.Collectors.groupingBy(Todo::getCreatedBy))
                 .forEach((userId, todos) -> {
-                    User user = userRepo.findByEmail(userId);
+                    User user = userRepo.findByEmail(userId).orElse(null);
                     if (user != null && user.getEmail() != null && !todos.isEmpty()) {
                         StringBuilder todoListHtml = new StringBuilder();
                         for (Todo todo : todos) {
