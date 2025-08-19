@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Test</title>
+    <style>
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 16px; background: #f7f7fb; }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .row > * { flex: 1; min-width: 220px; }
+        label { font-size: 12px; color: #444; display: block; margin-bottom: 4px; }
+        input[type="text"], input[type="password"], textarea, select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box; background: #fff; }
+        button { padding: 8px 12px; border: 1px solid #999; background: #fff; border-radius: 6px; cursor: pointer; }
+        button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+        button.danger { background: #ef4444; border-color: #ef4444; color: #fff; }
+        #chat { display: grid; grid-template-rows: auto 1fr auto; height: 70vh; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; }
+        #header { padding: 10px; background: #f0f4ff; border-bottom: 1px solid #e3e8ff; display: flex; justify-content: space-between; align-items: center; }
+        #messages { padding: 10px; overflow: auto; background: #fafafa; }
+        .msg { margin: 6px 0; padding: 8px 10px; border-radius: 10px; max-width: 75%; display: inline-block; }
+        .me { background: #dbeafe; align-self: flex-end; }
+        .other { background: #e5e7eb; }
+        .meta { font-size: 11px; color: #555; margin-top: 2px; }
+        #composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #eee; }
+        #input { flex: 1; }
+        #log { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; height: 160px; overflow: auto; background: #0b1021; color: #d6e7ff; padding: 8px; border-radius: 6px; }
+        #typing { font-size: 12px; color: #666; padding: 6px 10px; height: 18px; }
+        small.hint { color: #666; }
+    </style>
+</head>
+<body>
+<h2>Chat Test</h2>
+<div class="row">
+    <div>
+        <label>Base URL</label>
+        <input id="baseUrl" type="text" placeholder="http://localhost:8080">
+    </div>
+    <div>
+        <label>JWT Token <small>(used for history/REST)</small></label>
+        <input id="token" type="text">
+    </div>
+    <div>
+        <label>My Email</label>
+        <input id="meEmail" type="text">
+    </div>
+    <div>
+        <label>Peer Email</label>
+        <input id="peerEmail" type="text">
+    </div>
+</div>
+<div class="row">
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+    <button id="loadHistoryBtn">Load History</button>
+    <button id="markReadWsBtn">Mark Read (WS)</button>
+</div>
+<div id="chat">
+    <div id="header">
+        <div>Room: <span id="roomName">-</span></div>
+        <div></div>
+    </div>
+    <div id="messages"></div>
+    <div id="composer">
+        <input id="input" type="text" placeholder="Type a message...">
+        <button id="sendBtn">Send</button>
+        <label>
+            <input id="typingToggle" type="checkbox" checked> typing events
+        </label>
+    </div>
+</div>
+<div id="typing"></div>
+<div>
+    <label>Log</label>
+    <pre id="log"></pre>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script>
+    let stomp = null;
+    let typingTimer = null;
+    let connected = false;
+    const els = {
+        baseUrl: () => document.getElementById('baseUrl').value.trim().replace(/\/+$/, ''),
+        token: () => document.getElementById('token').value.trim(),
+        meEmail: () => document.getElementById('meEmail').value.trim(),
+        peerEmail: () => document.getElementById('peerEmail').value.trim(),
+        roomName: document.getElementById('roomName'),
+        messages: document.getElementById('messages'),
+        typing: document.getElementById('typing'),
+        input: document.getElementById('input'),
+        sendBtn: document.getElementById('sendBtn'),
+        connectBtn: document.getElementById('connectBtn'),
+        disconnectBtn: document.getElementById('disconnectBtn'),
+        loadHistoryBtn: document.getElementById('loadHistoryBtn'),
+        markReadWsBtn: document.getElementById('markReadWsBtn'),
+        typingToggle: document.getElementById('typingToggle'),
+        log: document.getElementById('log'),
+    };
+    function logLine(msg, obj) {
+        const time = new Date().toLocaleTimeString();
+        els.log.textContent += `[${time}] ${msg}` + (obj ? ` ${JSON.stringify(obj)}` : '') + '\n';
+        els.log.scrollTop = els.log.scrollHeight;
+    }
+    function setConnected(state) {
+        connected = state;
+        els.connectBtn.disabled = state;
+        els.disconnectBtn.disabled = !state;
+        els.roomName.textContent = state ? `${els.meEmail()} ↔ ${els.peerEmail()}` : '-';
+    }
+    function connect() {
+        const base = els.baseUrl();
+        const me = els.meEmail();
+        const token = els.token();
+        if (!base || !me || !token) {
+            alert('Base URL, My Email, and JWT Token are required');
+            return;
+        }
+        const sock = new SockJS(base + '/ws');
+        stomp = Stomp.over(sock);
+        stomp.debug = null;
+        const headers = {
+            userEmail: me,
+            Authorization: 'Bearer ' + token,
+        };
+        stomp.connect(headers, onConnected, (err) => {
+            logLine('STOMP error', err);
+            setConnected(false);
+        });
+    }
+    function onConnected() {
+        setConnected(true);
+        logLine('Connected');
+        const me = els.meEmail();
+        const headers = { userEmail: me };
+        stomp.subscribe('/queue/messages-' + me, (frame) => {
+            const msg = JSON.parse(frame.body);
+            addMessage(msg);
+            if (msg.senderEmail === els.peerEmail() && msg.receiverEmail === me) {
+                markReadWs();
+            }
+        }, headers);
+        stomp.subscribe('/queue/typing-' + me, (frame) => {
+            const ev = JSON.parse(frame.body);
+            showTyping(ev);
+        });
+        stomp.subscribe('/queue/read-' + me, (frame) => {
+            const ev = JSON.parse(frame.body);
+            logLine('Read receipt received', ev);
+            showSystem(`${ev.meEmail} marked messages as read`);
+        });
+    }
+    function disconnect() {
+        if (stomp) {
+            stomp.disconnect(() => {
+                logLine('Disconnected');
+                setConnected(false);
+            });
+        }
+    }
+    function sendMessage() {
+        if (!connected) return;
+        const content = els.input.value.trim();
+        if (!content) return;
+        const payload = {
+            senderEmail: els.meEmail(),
+            receiverEmail: els.peerEmail(),
+            content
+        };
+        stomp.send('/app/chat.send', {}, JSON.stringify(payload));
+        els.input.value = '';
+        typingOffSoon(true);
+    }
+    function typingOn() {
+        if (!connected || !els.typingToggle.checked) return;
+        const payload = { toEmail: els.peerEmail(), typing: true };
+        stomp.send('/app/chat.typing', {}, JSON.stringify(payload));
+    }
+    function typingOffSoon(immediate = false) {
+        if (!els.typingToggle.checked || !connected) return;
+        if (typingTimer) clearTimeout(typingTimer);
+        const sendOff = () => {
+            const payload = { fromEmail: els.meEmail(), toEmail: els.peerEmail(), typing: false };
+            stomp.send('/app/chat.typing', {}, JSON.stringify(payload));
+        };
+        if (immediate) sendOff();
+        else typingTimer = setTimeout(sendOff, 900);
+    }
+    function showTyping(ev) {
+        if (ev.fromEmail !== els.peerEmail()) return;
+        els.typing.textContent = ev.typing ? `${ev.fromEmail} is typing...` : '';
+        if (!ev.typing) return;
+        clearTimeout(els.typing._timer);
+        els.typing._timer = setTimeout(() => els.typing.textContent = '', 1500);
+    }
+    function addMessage(m) {
+        const me = els.meEmail();
+        const isMe = m.senderEmail === me;
+        const wrap = document.createElement('div');
+        wrap.style.display = 'flex';
+        wrap.style.justifyContent = isMe ? 'flex-end' : 'flex-start';
+        const div = document.createElement('div');
+        div.className = 'msg ' + (isMe ? 'me' : 'other');
+        div.innerHTML = `
+        <div>${escapeHtml(m.content)}</div>
+        <div class="meta">${isMe ? 'You' : m.senderEmail} • ${fmtTime(m.timestamp)} • ${m.status}</div>
+      `;
+        wrap.appendChild(div);
+        els.messages.appendChild(wrap);
+        els.messages.scrollTop = els.messages.scrollHeight;
+    }
+    function showSystem(text) {
+        const div = document.createElement('div');
+        div.className = 'meta';
+        div.style.textAlign = 'center';
+        div.style.margin = '6px 0';
+        div.textContent = text;
+        els.messages.appendChild(div);
+        els.messages.scrollTop = els.messages.scrollHeight;
+    }
+    function fmtTime(ts) {
+        try { return new Date(ts).toLocaleString(); } catch { return ts; }
+    }
+    function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    async function loadHistory() {
+        const base = els.baseUrl();
+        const token = els.token();
+        const peer = els.peerEmail();
+        if (!token) {
+            alert('JWT token required for history');
+            return;
+        }
+        try {
+            const url = `${base}/messages/history?otherEmail=${encodeURIComponent(peer)}&page=0&size=30`;
+            const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            els.messages.innerHTML = '';
+            const items = (data.items || []).slice().reverse();
+            items.forEach(addMessage);
+            logLine('History loaded', { count: items.length });
+        } catch (e) {
+            logLine('Failed to load history: ' + e.message);
+        }
+    }
+    function markReadWs() {
+        if (!connected) return;
+        const payload = { meEmail: els.meEmail(), otherEmail: els.peerEmail() };
+        stomp.send('/app/chat.read', {}, JSON.stringify(payload));
+        logLine('Sent mark-read (WS)', payload);
+    }
+    els.connectBtn.addEventListener('click', connect);
+    els.disconnectBtn.addEventListener('click', disconnect);
+    els.sendBtn.addEventListener('click', sendMessage);
+    els.input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+        else typingOn();
+    });
+    els.input.addEventListener('keyup', () => typingOffSoon(false));
+    els.loadHistoryBtn.addEventListener('click', loadHistory);
+    els.markReadWsBtn.addEventListener('click', markReadWs);
+    window.addEventListener('beforeunload', () => { if (connected) disconnect(); });
+</script>
+</body>
+</html>

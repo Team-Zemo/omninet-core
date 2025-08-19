@@ -32,9 +32,9 @@ public class MessageService {
     private final MessageQueueService mq;
 
     @Transactional
-    public MessageView send(SendMessageDTO dto) {
+    public MessageView send(String senderEmail, SendMessageDTO dto) {
 
-        User sender = users.findByEmail(dto.getSenderEmail()).orElseThrow(() -> new IllegalArgumentException("User not found: " + dto.getSenderEmail()));
+        User sender = users.findByEmail(senderEmail).orElseThrow(() -> new IllegalArgumentException("User not found: " + senderEmail));
         User receiver = users.findByEmail(dto.getReceiverEmail()).orElseThrow(() -> new IllegalArgumentException("User not found: " + dto.getReceiverEmail()));
 
         contacts.ensureBidirectional(sender.getEmail(), receiver.getEmail());

@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MarkReadRequest {
-    private String meEmail;
+    private String myEmail;
     private String otherEmail;
 }
