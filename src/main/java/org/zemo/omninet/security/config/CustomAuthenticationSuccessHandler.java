@@ -3,6 +3,7 @@ package org.zemo.omninet.security.config;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -33,7 +34,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
+                                        Authentication authentication) throws IOException {
         OAuth2User principal = (OAuth2User) authentication.getPrincipal();
         String userAgent = request.getHeader("User-Agent");
         String ipAddress = HttpUtils.getClientIpAddress(request);
@@ -44,7 +45,20 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             String accessToken = jwtService.generateAccessToken(user);
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(user, userAgent, ipAddress);
 
-            String redirectUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/auth/callback")
+            // 1. Get the redirect URI from the session
+            HttpSession session = request.getSession();
+            String targetUrl = (String) session.getAttribute("OAUTH2_REDIRECT_URI");
+
+            // 2. Clear the attribute
+            if (targetUrl != null) {
+                System.out.println("Redirecting to: " + targetUrl);
+                session.removeAttribute("OAUTH2_REDIRECT_URI");
+            } else {
+                // 3. Fallback to a default URL if none was provided
+                targetUrl = "http://localhost:5173/auth/callback"; // Default for web
+            }
+
+            String redirectUrl = UriComponentsBuilder.fromUriString(targetUrl)
                     .queryParam("access_token", URLEncoder.encode(accessToken, StandardCharsets.UTF_8))
                     .queryParam("refresh_token", URLEncoder.encode(refreshToken.getToken(), StandardCharsets.UTF_8))
                     .queryParam("token_type", "Bearer")

@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -26,15 +27,18 @@ public class SecurityConfig {
     private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final OAuth2RedirectCaptureFilter oAuth2RedirectCaptureFilter;
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
                           CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
                           JwtAuthenticationFilter jwtAuthenticationFilter,
-                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+                          OAuth2RedirectCaptureFilter oAuth2RedirectCaptureFilter) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.oAuth2RedirectCaptureFilter = oAuth2RedirectCaptureFilter;
     }
 
     @Bean
@@ -74,10 +78,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(oAuth2RedirectCaptureFilter, OAuth2AuthorizationRequestRedirectFilter.class)
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")
                         .successHandler(customAuthenticationSuccessHandler)
-                        .failureUrl("/login?error=true")
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
