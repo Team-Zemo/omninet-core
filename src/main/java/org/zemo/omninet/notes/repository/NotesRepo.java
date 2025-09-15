@@ -8,8 +8,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.zemo.omninet.notes.entity.Notes;
 
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface NotesRepo extends JpaRepository<Notes, Integer> {
 
@@ -33,4 +35,6 @@ public interface NotesRepo extends JpaRepository<Notes, Integer> {
             and n.createdBy = :userId
             """)
     Page<Notes> searchNotes(@Param("keyword") String keyword, @Param("userId") String userID, Pageable pageable);
+
+    Optional<Notes> findByIdAndCreatedBy(Integer id, String email);
 }

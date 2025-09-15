@@ -23,6 +23,7 @@ import org.zemo.omninet.notes.repository.CategoryRepo;
 import org.zemo.omninet.notes.repository.FileRepo;
 import org.zemo.omninet.notes.repository.NotesRepo;
 import org.zemo.omninet.notes.service.NotesService;
+import org.zemo.omninet.notes.util.CommonUtil;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -244,7 +245,7 @@ public class NotesServiceImpl implements NotesService {
 
     @Override
     public void softDeleteNotes(Integer id) throws ResourceNotFoundException {
-        Notes notes = notesRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Notes id invalid "));
+        Notes notes = notesRepo.findByIdAndCreatedBy(id, CommonUtil.getLoggedInUser().getEmail()).orElseThrow(() -> new ResourceNotFoundException("Notes id invalid "));
         notes.setIsDeleted(true);
         notes.setDeletedAt(LocalDateTime.now());
         notesRepo.save(notes);
@@ -252,7 +253,7 @@ public class NotesServiceImpl implements NotesService {
 
     @Override
     public void restoreNotes(Integer id) throws ResourceNotFoundException {
-        Notes notes = notesRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Notes id invalid "));
+        Notes notes = notesRepo.findByIdAndCreatedBy(id,CommonUtil.getLoggedInUser().getEmail()) .orElseThrow(() -> new ResourceNotFoundException("Notes id invalid "));
         notes.setIsDeleted(false);
         notes.setDeletedAt(null);
         notesRepo.save(notes);
@@ -271,7 +272,7 @@ public class NotesServiceImpl implements NotesService {
 
     @Override
     public void hardDeleteNotes(Integer id) throws ResourceNotFoundException {
-        Notes notes = notesRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("notes not found"));
+        Notes notes = notesRepo.findByIdAndCreatedBy(id,CommonUtil.getLoggedInUser().getEmail()).orElseThrow(() -> new ResourceNotFoundException("notes not found"));
 
         if (notes.getIsDeleted()) {
             notesRepo.delete(notes);
@@ -292,7 +293,7 @@ public class NotesServiceImpl implements NotesService {
 
     @Override
     public boolean copyNotes(Integer id) throws ResourceNotFoundException {
-        Notes notes = notesRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("notes not found"));
+        Notes notes = notesRepo.findByIdAndCreatedBy(id,CommonUtil.getLoggedInUser().getEmail()).orElseThrow(() -> new ResourceNotFoundException("notes not found"));
 
         Notes copy = Notes.builder()
                 .title(notes.getTitle())
