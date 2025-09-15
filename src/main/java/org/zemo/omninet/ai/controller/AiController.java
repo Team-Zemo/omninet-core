@@ -13,6 +13,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -68,6 +70,53 @@ public class AiController {
                     Map.of("error", "Failed to process chat request")
             );
         }
+    }
+
+    @PostMapping("/chat/reactive")
+    public Mono<ResponseEntity<Map<String, Object>>> reactiveChat(
+            @RequestParam("prompt") String prompt,
+            @RequestParam("sessionId") Long sessionId) {
+
+        log.debug("Received reactive chat request: {} for session: {}", prompt, sessionId);
+
+        return Mono.just(sessionId)
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(id -> {
+                    try {
+                        ChatSession session = chatService.getChatSessionById(id)
+                                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+                        // Save user message
+                        ChatMessage userMessage = chatService.saveMessage(session, ChatMessage.MessageType.USER_TEXT, prompt);
+
+                        // Get AI response with conversation history
+                        String aiResponse = aiService.getTextResponseWithHistory(prompt, session);
+
+                        // Save AI response
+                        ChatMessage aiMessage = chatService.saveMessage(session, ChatMessage.MessageType.AI_TEXT, aiResponse);
+
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("userMessage", Map.of(
+                                "id", userMessage.getId(),
+                                "content", userMessage.getContent(),
+                                "type", userMessage.getType(),
+                                "createdAt", userMessage.getCreatedAt()
+                        ));
+                        result.put("aiMessage", Map.of(
+                                "id", aiMessage.getId(),
+                                "content", aiMessage.getContent(),
+                                "type", aiMessage.getType(),
+                                "createdAt", aiMessage.getCreatedAt()
+                        ));
+
+                        return Mono.just(ResponseEntity.ok(result));
+                    } catch (Exception e) {
+                        log.error("Error processing reactive chat request", e);
+                        return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                                Map.of("error", "Failed to process chat request")
+                        ));
+                    }
+                });
     }
 
     @PostMapping("/chat/speech")
