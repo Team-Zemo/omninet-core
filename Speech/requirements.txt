@@ -1,0 +1,4 @@
+Flask
+TTS
+openai-whisper
+soundfile
