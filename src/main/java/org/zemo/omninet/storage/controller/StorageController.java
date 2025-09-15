@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.zemo.omninet.notes.util.CommonUtil;
@@ -35,6 +34,37 @@ public class StorageController {
      */
     private String getUserEmail() {
         return Objects.requireNonNull(CommonUtil.getLoggedInUser()).getEmail();
+    }
+
+    /**
+     * Normalize folder name for proper path handling
+     */
+    private String normalizeFolderName(String folderName) {
+        if (folderName == null || folderName.isEmpty() || "root".equals(folderName)) {
+            return "";
+        }
+        
+        // Security check: prevent directory traversal
+        if (folderName.contains("..")) {
+            throw new IllegalArgumentException("Folder name cannot contain '..' (directory traversal attempt)");
+        }
+        
+        // Security check: prevent absolute paths
+        if (folderName.startsWith("/")) {
+            folderName = folderName.substring(1);
+        }
+        
+        // Remove trailing slash if present (we'll add it later when needed)
+        if (folderName.endsWith("/")) {
+            folderName = folderName.substring(0, folderName.length() - 1);
+        }
+        
+        // Additional security checks
+        if (folderName.contains("\\") || folderName.contains("\0")) {
+            throw new IllegalArgumentException("Folder name contains invalid characters");
+        }
+        
+        return folderName.isEmpty() ? "" : folderName + "/";
     }
 
     /**
@@ -139,15 +169,24 @@ public class StorageController {
     /**
      * List all files and folders in a specific folder
      */
-    @Operation(description = "Api to get all files and folders in a specific foder")
+    @Operation(description = "Api to get all files and folders in a specific folder")
     @GetMapping("/folders/{folderName}/contents")
     public ResponseEntity<StorageResponse> listFolderContents(
             @PathVariable String folderName) {
         try {
             String userEmail = getUserEmail();
-            String fullFolderPath = "users/" + userEmail + "/" + folderName + "/";
+            
+            // Handle root folder case
+            if ("root".equals(folderName) || "".equals(folderName)) {
+                folderName = "";
+            }
+            
+            // Normalize folder name - remove leading/trailing slashes and add proper format
+            String normalizedFolder = normalizeFolderName(folderName);
+            String fullFolderPath = "users/" + userEmail + "/" + normalizedFolder;
 
-            Iterable<Result<Item>> objects = storageService.listObjectsInFolder(fullFolderPath);
+            // Use direct children listing for better performance
+            Iterable<Result<Item>> objects = storageService.listDirectChildren(fullFolderPath);
             List<FileInfoResponse> fileInfoList = new ArrayList<>();
 
             for (Result<Item> result : objects) {
@@ -167,26 +206,26 @@ public class StorageController {
                     continue;
                 }
 
-                // Check if this is a direct child (not nested deeper)
-                String[] pathParts = relativePath.split("/");
-                boolean isDirectChild = pathParts.length <= 2; // file or folder/
-
-                if (!isDirectChild) {
-                    continue; // Skip nested items for this listing
-                }
-
                 // Determine if it's a folder or file
                 boolean isFolder = objectName.endsWith("/");
                 String name;
-                String displayPath;
 
-                name = pathParts[0];
                 if (isFolder) {
-                    // For folders, remove the trailing slash for display
-                    displayPath = name + "/";
+                    // For folders, remove the trailing slash for display name
+                    name = relativePath.substring(0, relativePath.length() - 1);
+                    
+                    // Skip if it contains nested paths (shouldn't happen with delimiter, but safety check)
+                    if (name.contains("/")) {
+                        continue;
+                    }
                 } else {
-                    // For files, use the full name
-                    displayPath = relativePath;
+                    // For files, use the full relative name
+                    name = relativePath;
+                    
+                    // Skip nested files (shouldn't happen with delimiter, but safety check)
+                    if (name.contains("/")) {
+                        continue;
+                    }
                 }
 
                 // Get size and last modified date
@@ -197,12 +236,12 @@ public class StorageController {
                         item.lastModified().toLocalDateTime() :
                         LocalDateTime.now();
 
-                fileInfoList.add(new FileInfoResponse(name, displayPath, size, lastModified, isFolder));
+                fileInfoList.add(new FileInfoResponse(name, relativePath, size, lastModified, isFolder));
             }
 
             return ResponseEntity.ok(StorageResponse.success("Folder contents retrieved successfully", fileInfoList));
         } catch (Exception e) {
-            log.error("Error listing folder contents for user {}: {}", getUserEmail(), e.getMessage());
+            log.error("Error listing folder contents '{}' for user {}: {}", folderName, getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to list folder contents: " + e.getMessage()));
         }
@@ -222,7 +261,7 @@ public class StorageController {
 
             return ResponseEntity.ok(StorageResponse.success("File existence checked", exists));
         } catch (Exception e) {
-            log.error("Error checking file existence for user {}: {}", getUserEmail(), e.getMessage());
+            log.error("Error checking file existence '{}' for user {}: {}", fileName, getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to check file existence: " + e.getMessage()));
         }
@@ -237,14 +276,70 @@ public class StorageController {
             @PathVariable String folderName) {
         try {
             String userEmail = getUserEmail();
-            String fullFolderPath = "users/" + userEmail + "/" + folderName + "/";
+            String normalizedFolder = normalizeFolderName(folderName);
+            String fullFolderPath = "users/" + userEmail + "/" + normalizedFolder;
             boolean exists = storageService.folderExists(fullFolderPath);
 
             return ResponseEntity.ok(StorageResponse.success("Folder existence checked", exists));
         } catch (Exception e) {
-            log.error("Error checking folder existence for user {}: {}", getUserEmail(), e.getMessage());
+            log.error("Error checking folder existence '{}' for user {}: {}", folderName, getUserEmail(), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(StorageResponse.error("Failed to check folder existence: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * List all files and folders in the user's root directory
+     */
+    @Operation(description = "Api to get all files and folders in the user's root directory")
+    @GetMapping("/contents")
+    public ResponseEntity<StorageResponse> listRootContents() {
+        try {
+            String userEmail = getUserEmail();
+            String userRootPath = "users/" + userEmail + "/";
+
+            // Use direct children listing for better performance
+            Iterable<Result<Item>> objects = storageService.listDirectChildren(userRootPath);
+            List<FileInfoResponse> contentList = new ArrayList<>();
+
+            for (Result<Item> result : objects) {
+                Item item = result.get();
+                String objectName = item.objectName();
+
+                // Skip the user root folder itself
+                if (objectName.equals(userRootPath)) {
+                    continue;
+                }
+
+                String relativePath = objectName.substring(userRootPath.length());
+                boolean isFolder = objectName.endsWith("/");
+                String name;
+
+                if (isFolder) {
+                    // For folders, remove the trailing slash for display name
+                    name = relativePath.substring(0, relativePath.length() - 1);
+                } else {
+                    // For files, use the full relative name
+                    name = relativePath;
+                }
+
+                // Only include direct children (no nested paths)
+                if (!name.contains("/")) {
+                    long size = isFolder ? 0 : item.size();
+
+                    LocalDateTime lastModified = item.lastModified() != null ?
+                            item.lastModified().toLocalDateTime() :
+                            LocalDateTime.now();
+
+                    contentList.add(new FileInfoResponse(name, relativePath, size, lastModified, isFolder));
+                }
+            }
+
+            return ResponseEntity.ok(StorageResponse.success("Root contents retrieved successfully", contentList));
+        } catch (Exception e) {
+            log.error("Error listing root contents for user {}: {}", getUserEmail(), e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(StorageResponse.error("Failed to list root contents: " + e.getMessage()));
         }
     }
 
@@ -258,7 +353,8 @@ public class StorageController {
             String userEmail = getUserEmail();
             String userRootPath = "users/" + userEmail + "/";
 
-            Iterable<Result<Item>> objects = storageService.listObjectsInFolder(userRootPath);
+            // Use direct children listing for better performance
+            Iterable<Result<Item>> objects = storageService.listDirectChildren(userRootPath);
             List<FileInfoResponse> folderList = new ArrayList<>();
 
             for (Result<Item> result : objects) {
@@ -277,7 +373,11 @@ public class StorageController {
 
                     // Only include direct subfolders (no nested paths)
                     if (!folderName.contains("/")) {
-                        folderList.add(new FileInfoResponse(folderName, relativePath, 0, true));
+                        LocalDateTime lastModified = item.lastModified() != null ?
+                                item.lastModified().toLocalDateTime() :
+                                LocalDateTime.now();
+                        
+                        folderList.add(new FileInfoResponse(folderName, relativePath, 0, lastModified, true));
                     }
                 }
             }
