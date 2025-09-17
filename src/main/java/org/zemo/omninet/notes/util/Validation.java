@@ -44,6 +44,7 @@ public class Validation {
             }
 
             // Validate isActive
+            categoryDto.setIsActive(true);
             if (ObjectUtils.isEmpty(categoryDto.getIsActive())) {
                 errors.put("isActive", "isActive field is null or empty");
             } else if (!(categoryDto.getIsActive() instanceof Boolean)) {

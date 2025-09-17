@@ -83,3 +83,6 @@ spring.rabbitmq.password=guest
 
 chat.rabbitmq.exchange=chat.direct
 chat.rabbitmq.queue.prefix=chat.user.
+
+cleanup.initial-delay-ms=10000
+cleanup.fixed-delay-ms=3600000

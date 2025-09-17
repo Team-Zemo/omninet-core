@@ -6,6 +6,12 @@ target/
 
 ### Application Properties ###
 src/main/resources/application.properties
+src/main/resources/application.yml
+
+### Python ###
+__pycache__/
+.venv
+.python-version
 
 ### STS ###
 .apt_generated
