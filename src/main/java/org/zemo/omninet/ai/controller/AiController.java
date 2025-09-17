@@ -1,5 +1,6 @@
 package org.zemo.omninet.ai.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.zemo.omninet.ai.model.ChatMessage;
 import org.zemo.omninet.ai.model.ChatSession;
 import org.zemo.omninet.ai.service.AiService;
@@ -13,8 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,6 +22,7 @@ import java.util.Map;
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "AI Interaction")
 public class AiController {
 
     private final AiService aiService;
@@ -72,53 +72,6 @@ public class AiController {
         }
     }
 
-    @PostMapping("/chat/reactive")
-    public Mono<ResponseEntity<Map<String, Object>>> reactiveChat(
-            @RequestParam("prompt") String prompt,
-            @RequestParam("sessionId") Long sessionId) {
-
-        log.debug("Received reactive chat request: {} for session: {}", prompt, sessionId);
-
-        return Mono.just(sessionId)
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(id -> {
-                    try {
-                        ChatSession session = chatService.getChatSessionById(id)
-                                .orElseThrow(() -> new RuntimeException("Session not found"));
-
-                        // Save user message
-                        ChatMessage userMessage = chatService.saveMessage(session, ChatMessage.MessageType.USER_TEXT, prompt);
-
-                        // Get AI response with conversation history
-                        String aiResponse = aiService.getTextResponseWithHistory(prompt, session);
-
-                        // Save AI response
-                        ChatMessage aiMessage = chatService.saveMessage(session, ChatMessage.MessageType.AI_TEXT, aiResponse);
-
-                        Map<String, Object> result = new HashMap<>();
-                        result.put("userMessage", Map.of(
-                                "id", userMessage.getId(),
-                                "content", userMessage.getContent(),
-                                "type", userMessage.getType(),
-                                "createdAt", userMessage.getCreatedAt()
-                        ));
-                        result.put("aiMessage", Map.of(
-                                "id", aiMessage.getId(),
-                                "content", aiMessage.getContent(),
-                                "type", aiMessage.getType(),
-                                "createdAt", aiMessage.getCreatedAt()
-                        ));
-
-                        return Mono.just(ResponseEntity.ok(result));
-                    } catch (Exception e) {
-                        log.error("Error processing reactive chat request", e);
-                        return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                                Map.of("error", "Failed to process chat request")
-                        ));
-                    }
-                });
-    }
-
     @PostMapping("/chat/speech")
     public ResponseEntity<byte[]> chatWithSpeech(
             @RequestParam("prompt") String prompt,
@@ -134,8 +87,9 @@ public class AiController {
             chatService.saveMessage(session, ChatMessage.MessageType.USER_TEXT, prompt);
 
             // Get AI response with speech and conversation history
-            byte[] audioData = aiService.getSpeechResponseWithHistory(prompt, session);
-            String aiResponse = aiService.getTextResponseWithHistory(prompt, session);
+            AiVoiceResponse response = aiService.getSpeechResponseWithHistory(prompt, session);
+            byte[] audioData = response.getAudioData();
+            String aiResponse = response.getTextResponse();
 
             // Save AI response
             chatService.saveMessage(session, ChatMessage.MessageType.AI_AUDIO, aiResponse);
@@ -181,8 +135,9 @@ public class AiController {
             chatService.saveMessage(session, ChatMessage.MessageType.USER_AUDIO, recognizedText);
 
             // Get AI response with conversation history and synthesize speech
-            byte[] audioResponse = aiService.getSpeechResponseWithHistory(recognizedText, session);
-            String aiResponse = aiService.getTextResponseWithHistory(recognizedText, session);
+            AiVoiceResponse response = aiService.getSpeechResponseWithHistory(recognizedText, session);
+            byte[] audioResponse = response.getAudioData();
+            String aiResponse = response.getTextResponse();
 
             // Save AI audio response
             chatService.saveMessage(session, ChatMessage.MessageType.AI_AUDIO, aiResponse);

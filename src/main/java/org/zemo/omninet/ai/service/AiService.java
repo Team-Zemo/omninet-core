@@ -1,14 +1,13 @@
 package org.zemo.omninet.ai.service;
 
 import org.springframework.ai.ollama.OllamaChatModel;
+import org.zemo.omninet.ai.controller.AiVoiceResponse;
 import org.zemo.omninet.ai.model.ChatMessage;
 import org.zemo.omninet.ai.model.ChatSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.zemo.omninet.ai.service.SpeechSynthesisService;
-import org.zemo.omninet.ai.service.ChatService;
 
 import java.util.Comparator;
 import java.util.List;
@@ -21,6 +20,9 @@ public class AiService {
     private final ChatClient chatClient;
     private final SpeechSynthesisService speechSynthesisService;
     private final ChatService chatService;
+
+    @Value("${spring.ai.ollama.model}")
+    private String modelName;
 
     @Value("${ollama.system.instructions:You are a helpful AI assistant. Provide short responses like chatting face to face without markdown, emojis, or code blocks.}")
     private String systemInstructions;
@@ -61,9 +63,12 @@ public class AiService {
         return speechSynthesisService.synthesizeSpeech(textResponse);
     }
 
-    public byte[] getSpeechResponseWithHistory(String prompt, ChatSession session) {
+    public AiVoiceResponse getSpeechResponseWithHistory(String prompt, ChatSession session) {
+        AiVoiceResponse response = new AiVoiceResponse();
         String textResponse = getTextResponseWithHistory(prompt, session);
-        return speechSynthesisService.synthesizeSpeech(textResponse);
+        response.setTextResponse(textResponse);
+        response.setAudioData(speechSynthesisService.synthesizeSpeech(textResponse));
+        return response;
     }
 
     private String getResponse(String fullPrompt) {

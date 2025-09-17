@@ -41,13 +41,6 @@ public class ChatService {
         return chatMessageRepository.save(message);
     }
 
-    @Transactional
-    public ChatMessage saveAudioMessage(ChatSession session, ChatMessage.MessageType type, String content, String audioFilePath) {
-        ChatMessage message = new ChatMessage(session, type, content);
-        message.setAudioFilePath(audioFilePath);
-        return chatMessageRepository.save(message);
-    }
-
     public List<ChatMessage> getSessionMessages(ChatSession session) {
         return chatMessageRepository.findByChatSessionOrderByCreatedAtAsc(session);
     }
