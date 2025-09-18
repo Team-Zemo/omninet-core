@@ -71,7 +71,30 @@ public class TodoServiceImpl implements TodoService {
 
         return todoRepo.findByCreatedBy(userId)
                 .stream()
-                .map(td -> mapper.map(td, TodoDto.class))
+                .map(todo -> {
+                    TodoDto todoDto = mapper.map(todo, TodoDto.class);
+                    setStatus(todoDto, todo);
+                    return todoDto;
+                })
                 .toList();
+    }
+
+    @Override
+    public boolean deleteById(Integer id) {
+        try {
+            // First check if the todo exists and belongs to the current user
+            Todo todo = todoRepo.findByIdAndCreatedBy(id, CommonUtil.getLoggedInUser().getEmail())
+                    .orElse(null);
+
+            if (todo == null) {
+                return false; // Todo not found or user doesn't have permission
+            }
+
+            todoRepo.delete(todo);
+            return true;
+        } catch (Exception e) {
+            // Log the exception if needed
+            return false;
+        }
     }
 }

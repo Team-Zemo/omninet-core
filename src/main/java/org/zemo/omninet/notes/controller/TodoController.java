@@ -57,4 +57,16 @@ public class TodoController {
         return CommonUtil.createBuildResponse(save, HttpStatus.OK);
 
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_USER','ADMIN')")
+    public ResponseEntity<?> deleteTodoById(@PathVariable Integer id) {
+        boolean deleted = todoService.deleteById(id);
+
+        if (deleted) {
+            return CommonUtil.createBuildResponseMessage("Todo deleted successfully", HttpStatus.OK);
+        } else {
+            return CommonUtil.createErrorResponseMessage("Todo not found or you don't have permission to delete it", HttpStatus.NOT_FOUND);
+        }
+    }
 }

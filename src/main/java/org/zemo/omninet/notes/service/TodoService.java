@@ -13,4 +13,6 @@ public interface TodoService {
     TodoDto getTodoById(Integer id) throws ResourceNotFoundException;
 
     List<TodoDto> getTodoByUser(String id);
+
+    boolean deleteById(Integer id);
 }
