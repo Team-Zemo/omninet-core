@@ -41,7 +41,7 @@ public class EmailRegistrationService {
         Optional<User> existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
             User user = existingUser.get();
-            if ("email".equals(user.getRegistrationSource())) {
+            if ("email".equals(user.getRegistrationSource()) || user.getLinkedProviders().contains("email")) {
                 throw new SuccessException("An account with this email already exists. Please try logging in.");
             } else {
                 log.info("OAuth user exists for email: {}, will handle merge during completion", email);
