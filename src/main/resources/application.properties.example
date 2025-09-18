@@ -86,3 +86,7 @@ chat.rabbitmq.queue.prefix=chat.user.
 
 cleanup.initial-delay-ms=10000
 cleanup.fixed-delay-ms=3600000
+
+# Spring AI Ollama
+spring.ai.ollama.base-url=url=http://localhost:11434
+spring.ai.ollama.model=gemma3:1b
