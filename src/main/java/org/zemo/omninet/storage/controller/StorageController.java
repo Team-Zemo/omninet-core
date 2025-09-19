@@ -109,11 +109,12 @@ public class StorageController {
      * Delete a file for the authenticated user
      */
     @Operation(description = "Api to delete a file")
-    @DeleteMapping("/files/{fileName}")
+    @DeleteMapping("/files")
     public ResponseEntity<StorageResponse> deleteFile(
-            @PathVariable String fileName) {
+            @RequestBody DeleteFileRequest request) {
         try {
             String userEmail = getUserEmail();
+            String fileName = request.getFileName();
             storageService.deleteFile(userEmail, fileName);
             return ResponseEntity.ok(StorageResponse.success("File deleted successfully"));
         } catch (Exception e) {
