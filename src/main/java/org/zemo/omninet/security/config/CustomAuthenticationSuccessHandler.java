@@ -55,7 +55,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                 session.removeAttribute("OAUTH2_REDIRECT_URI");
             } else {
                 // 3. Fallback to a default URL if none was provided
-                targetUrl = "http://localhost:5173/auth/callback"; // Default for web
+                targetUrl = "http://steel.udaykhare.social:5173/auth/callback"; // Default for web
             }
 
             String redirectUrl = UriComponentsBuilder.fromUriString(targetUrl)
