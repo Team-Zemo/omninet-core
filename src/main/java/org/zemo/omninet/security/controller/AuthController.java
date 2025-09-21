@@ -157,4 +157,33 @@ public class AuthController {
             );
         }
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> changePassword(
+            @AuthenticationPrincipal User user,
+            @RequestParam String currentPassword,
+            @RequestParam String newPassword) {
+        try {
+            if (user == null) {
+                return ResponseEntity.status(401).body(ApiResponse.error("User not authenticated"));
+            }
+
+            ApiResponse<Map<String, Object>> response = authenticationService.changePassword(
+                    user.getEmail(),
+                    currentPassword,
+                    newPassword
+            );
+
+            if (response.isSuccess()) {
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            log.error("Error changing password: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Failed to change password")
+            );
+        }
+    }
 }

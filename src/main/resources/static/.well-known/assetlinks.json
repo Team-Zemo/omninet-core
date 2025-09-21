@@ -1,0 +1,25 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.teamzemo.omninet",
+      "sha256_cert_fingerprints": [
+        "C4:92:B4:E0:C7:8C:34:2A:D5:E2:98:E2:AA:28:07:B4:E3:B3:02:F4:09:D2:2F:AC:AE:94:52:9A:BF:29:6C:B7"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "web",
+      "site": "https://site.udaykhare.social"
+    }
+  }
+]

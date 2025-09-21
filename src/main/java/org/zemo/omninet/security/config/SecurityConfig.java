@@ -69,7 +69,8 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/Omninet-doc/**",
                                 "/Omninet-api-doc/**",
-                                "/actuator/**").permitAll()
+                                "/actuator/**",
+                                "/.well-known/**").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/api/auth/register/**", "/api/auth/verify-otp", "/api/auth/complete-registration").permitAll()
                         .requestMatchers("/api/auth/login/email", "/api/auth/check-methods").permitAll()
@@ -94,7 +95,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:*", "http://127.0.0.1:*", "*"));
+        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:*", "http://127.0.0.1:*","https://site.udaykhare.social"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

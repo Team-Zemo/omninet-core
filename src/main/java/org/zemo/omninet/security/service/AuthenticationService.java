@@ -192,4 +192,35 @@ public class AuthenticationService {
             return ApiResponse.error("Logout from all devices failed");
         }
     }
+
+    public ApiResponse<Map<String, Object>> changePassword(String email, String currentPassword, String newPassword) {
+        try {
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ApiResponse.error("User not found");
+            }
+
+            User user = userOpt.get();
+
+            if (!user.hasPassword()) {
+                return ApiResponse.error("Password authentication not set up for this account");
+            }
+
+            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                return ApiResponse.error("Current password is incorrect");
+            }
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("message", "Password changed successfully");
+
+            return ApiResponse.success(responseData, "Password changed");
+
+        } catch (Exception e) {
+            log.error("Error changing password: {}", e.getMessage(), e);
+            return ApiResponse.error("Failed to change password");
+        }
+    }
 }

@@ -1,6 +1,5 @@
 package org.zemo.omninet.security.config;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -55,7 +54,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                 session.removeAttribute("OAUTH2_REDIRECT_URI");
             } else {
                 // 3. Fallback to a default URL if none was provided
-                targetUrl = "http://steel.udaykhare.social:5173/auth/callback"; // Default for web
+                targetUrl = "https://site.udaykhare.social/auth/callback";
             }
 
             String redirectUrl = UriComponentsBuilder.fromUriString(targetUrl)
@@ -69,7 +68,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             response.sendRedirect(redirectUrl);
 
         } catch (AccountConflictException e) {
-            String redirectUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/auth/conflict")
+            String redirectUrl = UriComponentsBuilder.fromUriString("https://site.udaykhare.social/auth/conflict")
                     .queryParam("email", URLEncoder.encode(e.getEmail(), StandardCharsets.UTF_8))
                     .queryParam("existing_provider", URLEncoder.encode(e.getExistingProvider(), StandardCharsets.UTF_8))
                     .queryParam("new_provider", URLEncoder.encode(e.getNewProvider(), StandardCharsets.UTF_8))
@@ -80,7 +79,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
         } catch (Exception e) {
             log.error("Error during OAuth2 authentication success handling: {}", e.getMessage(), e);
-            response.sendRedirect("http://localhost:5173/login?error=oauth_error");
+            response.sendRedirect("https://site.udaykhare.social/login?error=oauth_error");
         }
     }
 }
