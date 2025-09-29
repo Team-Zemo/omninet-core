@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Chat with Video/Voice Calls</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .container { display: grid; grid-template-columns: 300px 1fr 300px; gap: 20px; height: 80vh; }
+        .contacts { background: #f5f5f5; border-radius: 8px; padding: 15px; overflow-y: auto; }
+        .chat { display: grid; grid-template-rows: auto 1fr auto auto; border: 1px solid #ddd; border-radius: 8px; }
+        .chat-header { background: #007bff; color: white; padding: 15px; display: flex; justify-content: between; align-items: center; }
+        .chat-messages { padding: 15px; overflow-y: auto; background: white; }
+        .chat-input { padding: 15px; border-top: 1px solid #eee; }
+        .call-controls { padding: 10px; background: #f8f9fa; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        .call-panel { background: #f5f5f5; border-radius: 8px; padding: 15px; }
+        .message { margin: 10px 0; padding: 10px; border-radius: 8px; max-width: 70%; }
+        .message.sent { background: #007bff; color: white; margin-left: auto; }
+        .message.received { background: #e9ecef; }
+        .contact { padding: 10px; cursor: pointer; border-radius: 5px; margin: 5px 0; }
+        .contact:hover { background: #e9ecef; }
+        .contact.online::before { content: "🟢 "; }
+        .contact.offline::before { content: "⚫ "; }
+        .call-status { padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .call-status.initiating { background: #fff3cd; }
+        .call-status.ringing { background: #d1ecf1; animation: pulse 1s infinite; }
+        .call-status.connected { background: #d4edda; }
+        .call-status.failed { background: #f8d7da; }
+        video { width: 100%; height: 200px; background: #000; border-radius: 5px; }
+        button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .typing-indicator { font-style: italic; color: #666; margin: 5px 0; }
+        .error-message { background: #f8d7da; color: #721c24; padding: 10px; margin: 5px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Contacts Panel -->
+        <div class="contacts">
+            <h3>Contacts</h3>
+            <div id="contactsList"></div>
+        </div>
+
+        <!-- Chat Panel -->
+        <div class="chat">
+            <div class="chat-header">
+                <span id="chatTitle">Select a contact to start chatting</span>
+                <div>
+                    <button id="videoCallBtn" class="btn-primary" disabled>📹 Video Call</button>
+                    <button id="voiceCallBtn" class="btn-primary" disabled>📞 Voice Call</button>
+                </div>
+            </div>
+            <div class="chat-messages" id="messages"></div>
+            <div class="call-controls" id="callControls" style="display: none;">
+                <button id="acceptCallBtn" class="btn-success">Accept</button>
+                <button id="rejectCallBtn" class="btn-danger">Reject</button>
+                <button id="endCallBtn" class="btn-danger">End Call</button>
+                <button id="muteBtn" class="btn-warning">Mute</button>
+                <button id="cameraBtn" class="btn-warning">Camera Off</button>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type a message..." style="width: 80%; padding: 8px;">
+                <button onclick="sendMessage()" class="btn-primary">Send</button>
+            </div>
+        </div>
+
+        <!-- Call Panel -->
+        <div class="call-panel">
+            <h3>Call Status</h3>
+            <div id="callStatus">No active call</div>
+            <video id="localVideo" autoplay muted style="display: none;"></video>
+            <video id="remoteVideo" autoplay style="display: none;"></video>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        let stompClient = null;
+        let currentUser = 'user1@example.com'; // This would come from authentication
+        let currentChat = null;
+        let typingTimeout = null;
+
+        // WebRTC variables
+        let localStream = null;
+        let remoteStream = null;
+        let peerConnection = null;
+        let currentCall = null;
+        let isVideoCall = false;
+
+        // WebRTC configuration
+        const rtcConfiguration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        // Initialize WebSocket connection
+        function connect() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+
+                // Subscribe to various message types
+                stompClient.subscribe('/queue/messages-' + currentUser, onMessageReceived);
+                stompClient.subscribe('/queue/typing-' + currentUser, onTypingReceived);
+                stompClient.subscribe('/queue/read-' + currentUser, onReadReceived);
+                stompClient.subscribe('/queue/errors', onError);
+
+                // Call-related subscriptions
+                stompClient.subscribe('/queue/call-offer-' + currentUser, onCallOffer);
+                stompClient.subscribe('/queue/call-response-' + currentUser, onCallResponse);
+                stompClient.subscribe('/queue/call-status-' + currentUser, onCallStatus);
+                stompClient.subscribe('/queue/call-end-' + currentUser, onCallEnd);
+                stompClient.subscribe('/queue/call-errors', onCallError);
+                stompClient.subscribe('/queue/ice-candidate-' + currentUser, onIceCandidate);
+
+                loadContacts();
+            });
+        }
+
+        // WebSocket message handlers
+        function onMessageReceived(message) {
+            const msg = JSON.parse(message.body);
+            displayMessage(msg);
+        }
+
+        function onTypingReceived(message) {
+            const typing = JSON.parse(message.body);
+            showTypingIndicator(typing);
+        }
+
+        function onReadReceived(message) {
+            const read = JSON.parse(message.body);
+            markMessagesAsRead(read.myEmail);
+        }
+
+        function onError(message) {
+            const error = JSON.parse(message.body);
+            showError(error.message);
+        }
+
+        // Call-related WebSocket handlers
+        function onCallOffer(message) {
+            const offer = JSON.parse(message.body);
+            handleIncomingCall(offer);
+        }
+
+        function onCallResponse(message) {
+            const response = JSON.parse(message.body);
+            handleCallResponse(response);
+        }
+
+        function onCallStatus(message) {
+            const status = JSON.parse(message.body);
+            updateCallStatus(status);
+        }
+
+        function onCallEnd(message) {
+            const endCall = JSON.parse(message.body);
+            handleCallEnd(endCall);
+        }
+
+        function onCallError(message) {
+            const error = JSON.parse(message.body);
+            showCallError(error);
+        }
+
+        function onIceCandidate(message) {
+            const candidate = JSON.parse(message.body);
+            handleRemoteIceCandidate(candidate);
+        }
+
+        // Chat functions
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            if (input.value.trim() && currentChat) {
+                const message = {
+                    receiverEmail: currentChat,
+                    content: input.value.trim()
+                };
+                stompClient.send('/app/chat.send', {}, JSON.stringify(message));
+                input.value = '';
+            }
+        }
+
+        function displayMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = message.senderEmail === currentUser ? 'message sent' : 'message received';
+            messageDiv.innerHTML = `<strong>${message.senderEmail}:</strong> ${message.content}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showTypingIndicator(typing) {
+            const messagesDiv = document.getElementById('messages');
+            let indicator = document.getElementById('typing-indicator');
+
+            if (typing.typing && !indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'typing-indicator';
+                indicator.textContent = `${typing.fromEmail} is typing...`;
+                messagesDiv.appendChild(indicator);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            } else if (!typing.typing && indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Video/Voice call functions
+        function initiateVideoCall() {
+            if (currentChat && !currentCall) {
+                isVideoCall = true;
+                startCall();
+            }
+        }
+
+        function initiateVoiceCall() {
+            if (currentChat && !currentCall) {
+                isVideoCall = false;
+                startCall();
+            }
+        }
+
+        async function startCall() {
+            try {
+                // Get user media
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: isVideoCall,
+                    audio: true
+                });
+
+                document.getElementById('localVideo').srcObject = localStream;
+                document.getElementById('localVideo').style.display = isVideoCall ? 'block' : 'none';
+
+                // Create peer connection
+                createPeerConnection();
+
+                // Add local stream to peer connection
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Create offer
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                // Send call offer through WebSocket
+                const callOffer = {
+                    receiverEmail: currentChat,
+                    callType: isVideoCall ? 'VIDEO' : 'VOICE',
+                    sdpOffer: offer.sdp
+                };
+
+                stompClient.send('/app/call.offer', {}, JSON.stringify(callOffer));
+                updateCallStatus({ state: 'INITIATING', calleeEmail: currentChat });
+
+            } catch (error) {
+                console.error('Error starting call:', error);
+                showCallError('Failed to start call: ' + error.message);
+            }
+        }
+
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(rtcConfiguration);
+
+            // Handle ICE candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate && currentCall) {
+                    const candidate = {
+                        callId: currentCall,
+                        candidate: event.candidate.candidate,
+                        sdpMid: event.candidate.sdpMid,
+                        sdpMLineIndex: event.candidate.sdpMLineIndex
+                    };
+                    stompClient.send('/app/call.ice-candidate', {}, JSON.stringify(candidate));
+                }
+            };
+
+            // Handle remote stream
+            peerConnection.ontrack = (event) => {
+                remoteStream = event.streams[0];
+                document.getElementById('remoteVideo').srcObject = remoteStream;
+                document.getElementById('remoteVideo').style.display = 'block';
+            };
+
+            // Handle connection state changes
+            peerConnection.onconnectionstatechange = () => {
+                console.log('Connection state:', peerConnection.connectionState);
+                if (peerConnection.connectionState === 'connected') {
+                    stompClient.send('/app/call.connected', {}, currentCall);
+                }
+            };
+        }
+
+        function handleIncomingCall(offer) {
+            if (currentCall) {
+                // Already in a call, reject
+                rejectCall(offer.callId, 'BUSY', 'Already in another call');
+                return;
+            }
+
+            currentCall = offer.callId;
+            isVideoCall = offer.callType === 'VIDEO';
+
+            updateCallStatus({
+                state: 'RINGING',
+                callerEmail: offer.callerEmail,
+                callType: offer.callType
+            });
+
+            document.getElementById('callControls').style.display = 'flex';
+
+            // Show incoming call UI
+            const callStatus = document.getElementById('callStatus');
+            callStatus.innerHTML = `
+                <div class="call-status ringing">
+                    Incoming ${offer.callType.toLowerCase()} call from ${offer.callerEmail}
+                </div>
+            `;
+        }
+
+        async function acceptCall() {
+            try {
+                // Get user media
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: isVideoCall,
+                    audio: true
+                });
+
+                document.getElementById('localVideo').srcObject = localStream;
+                document.getElementById('localVideo').style.display = isVideoCall ? 'block' : 'none';
+
+                // Create peer connection and add local stream
+                createPeerConnection();
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Set remote description from offer (this would need to be stored from the offer)
+                // Create answer
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+
+                // Send call response
+                const response = {
+                    callId: currentCall,
+                    responseType: 'ACCEPT',
+                    sdpAnswer: answer.sdp
+                };
+
+                stompClient.send('/app/call.response', {}, JSON.stringify(response));
+
+                updateCallStatus({ state: 'CONNECTING' });
+
+            } catch (error) {
+                console.error('Error accepting call:', error);
+                rejectCall(currentCall, 'ERROR', 'Failed to accept call');
+            }
+        }
+
+        function rejectCall(callId = currentCall, type = 'REJECT', reason = 'Call rejected') {
+            if (callId) {
+                const response = {
+                    callId: callId,
+                    responseType: type,
+                    reason: reason
+                };
+                stompClient.send('/app/call.response', {}, JSON.stringify(response));
+            }
+            endCurrentCall();
+        }
+
+        function endCall() {
+            if (currentCall) {
+                const endCall = {
+                    callId: currentCall,
+                    reason: 'USER_HANGUP'
+                };
+                stompClient.send('/app/call.end', {}, JSON.stringify(endCall));
+            }
+            endCurrentCall();
+        }
+
+        function endCurrentCall() {
+            // Clean up WebRTC
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+
+            // Reset UI
+            document.getElementById('localVideo').style.display = 'none';
+            document.getElementById('remoteVideo').style.display = 'none';
+            document.getElementById('callControls').style.display = 'none';
+            document.getElementById('callStatus').innerHTML = 'No active call';
+
+            currentCall = null;
+        }
+
+        function handleCallResponse(response) {
+            if (response.responseType === 'ACCEPT') {
+                // Handle accepted call - set remote description
+                peerConnection.setRemoteDescription(new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: response.sdpAnswer
+                }));
+                updateCallStatus({ state: 'CONNECTING' });
+            } else {
+                // Call rejected or busy
+                showCallError(`Call ${response.responseType.toLowerCase()}: ${response.reason}`);
+                endCurrentCall();
+            }
+        }
+
+        function handleCallEnd(endCall) {
+            showCallError(`Call ended: ${endCall.reason}`);
+            endCurrentCall();
+        }
+
+        function handleRemoteIceCandidate(candidateData) {
+            if (peerConnection) {
+                const candidate = new RTCIceCandidate({
+                    candidate: candidateData.candidate,
+                    sdpMid: candidateData.sdpMid,
+                    sdpMLineIndex: candidateData.sdpMLineIndex
+                });
+                peerConnection.addIceCandidate(candidate);
+            }
+        }
+
+        function updateCallStatus(status) {
+            const callStatus = document.getElementById('callStatus');
+            const stateClass = status.state.toLowerCase();
+            callStatus.innerHTML = `
+                <div class="call-status ${stateClass}">
+                    ${status.state}: ${status.callerEmail || status.calleeEmail || ''}
+                    ${status.callType ? `(${status.callType})` : ''}
+                </div>
+            `;
+
+            if (status.state === 'CONNECTED') {
+                document.getElementById('callControls').style.display = 'flex';
+                // Hide accept/reject, show end/mute/camera
+                document.getElementById('acceptCallBtn').style.display = 'none';
+                document.getElementById('rejectCallBtn').style.display = 'none';
+            }
+        }
+
+        function showCallError(message) {
+            const messagesDiv = document.getElementById('messages');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            messagesDiv.appendChild(errorDiv);
+        }
+
+        function showError(message) {
+            showCallError(message);
+        }
+
+        // UI Event Handlers
+        function selectContact(email) {
+            currentChat = email;
+            document.getElementById('chatTitle').textContent = `Chat with ${email}`;
+            document.getElementById('videoCallBtn').disabled = false;
+            document.getElementById('voiceCallBtn').disabled = false;
+
+            // Mark messages as read
+            stompClient.send('/app/chat.read', {}, JSON.stringify({
+                myEmail: currentUser,
+                otherEmail: email
+            }));
+        }
+
+        function loadContacts() {
+            // This would typically load from an API
+            const mockContacts = [
+                { email: 'user2@example.com', name: 'John Doe', online: true },
+                { email: 'user3@example.com', name: 'Jane Smith', online: false },
+                { email: 'user4@example.com', name: 'Bob Johnson', online: true }
+            ];
+
+            const contactsList = document.getElementById('contactsList');
+            contactsList.innerHTML = '';
+
+            mockContacts.forEach(contact => {
+                const contactDiv = document.createElement('div');
+                contactDiv.className = `contact ${contact.online ? 'online' : 'offline'}`;
+                contactDiv.textContent = contact.name;
+                contactDiv.onclick = () => selectContact(contact.email);
+                contactsList.appendChild(contactDiv);
+            });
+        }
+
+        // Event listeners
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            } else {
+                // Send typing indicator
+                if (currentChat) {
+                    stompClient.send('/app/chat.typing', {}, JSON.stringify({
+                        toEmail: currentChat,
+                        typing: true
+                    }));
+
+                    clearTimeout(typingTimeout);
+                    typingTimeout = setTimeout(() => {
+                        stompClient.send('/app/chat.typing', {}, JSON.stringify({
+                            toEmail: currentChat,
+                            typing: false
+                        }));
+                    }, 1000);
+                }
+            }
+        });
+
+        document.getElementById('videoCallBtn').onclick = initiateVideoCall;
+        document.getElementById('voiceCallBtn').onclick = initiateVoiceCall;
+        document.getElementById('acceptCallBtn').onclick = acceptCall;
+        document.getElementById('rejectCallBtn').onclick = () => rejectCall();
+        document.getElementById('endCallBtn').onclick = endCall;
+
+        // Initialize connection when page loads
+        window.onload = connect;
+    </script>
+</body>
+</html>
